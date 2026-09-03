@@ -3,7 +3,7 @@
 Each phase is focused, testable and shippable. A phase is not complete until
 typecheck, lint and build all pass and its exit criteria are demonstrably met.
 
-**Current position: Phase 4 complete.**
+**Current position: Phase 5 complete.**
 
 ---
 
@@ -147,16 +147,31 @@ every column of every table.
 
 ---
 
-## Phase 5 — Overlay runtime
+## Phase 5 — Overlay runtime ✅
 
-- [ ] Overlay CRUD and list
-- [ ] Opaque `public_token`, rotatable from the UI
-- [ ] `/overlay/[token]` — transparent, minimal JS, no dashboard code
-- [ ] **SSE endpoint** pushing events to the overlay
-- [ ] Test-event button in the dashboard
-- [ ] Copy browser-source URL
+- [x] Overlay CRUD, list and detail
+- [x] Opaque 128-bit `public_token`, rotatable — the old URL dies the moment
+      you rotate, and a rotated or unknown token renders an empty transparent
+      page rather than an error over the gameplay
+- [x] `/overlay/[token]` — transparent, its own layout, none of the dashboard's
+      JavaScript
+- [x] SSE endpoint with 20s heartbeats, disconnect cleanup, and buffering
+      disabled so alerts are not delivered late in a batch
+- [x] **Alert queue** — brought forward from Phase 6. Firing several events at
+      once is the first thing anyone tries, and retrofitting a queue into a
+      shape that assumes one alert at a time is far more expensive than building
+      it now
+- [x] Test alerts through the real pipeline, reporting how many sources received
+      them so pressing Test with OBS closed says so rather than appearing to work
+- [x] In-page preview over a stand-in for gameplay, so transparency and contrast
+      are judged honestly
+- [x] Copy browser-source URL with OBS setup steps
 
-**Exit:** an OBS browser source displays a test alert sent from the dashboard.
+**Exit met**, verified by driving a real browser exactly as OBS does: created an
+overlay, opened its URL in a separate page, confirmed the computed background is
+`rgba(0, 0, 0, 0)`, fired a test alert from the dashboard and watched it render
+in the overlay page, fired three in quick succession and confirmed only one was
+ever on screen, rotated the token and confirmed the old URL returned 404.
 
 ---
 

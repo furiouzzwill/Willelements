@@ -13,7 +13,7 @@ single folder you own.
 
 ## Current status
 
-**Phase 4 — Twitch connection. Complete and validated.**
+**Phase 5 — Overlay runtime. Complete and validated.**
 
 Working today:
 
@@ -30,15 +30,19 @@ Working today:
 - First-run onboarding
 - **Twitch connection** — OAuth with encrypted token storage, automatic refresh,
   and live status, follower count and recent follows on the dashboard
+- **OBS overlays** — transparent browser sources on rotatable opaque URLs, fed
+  by Server-Sent Events, with alerts that queue rather than overlap and test
+  events that travel the real pipeline
 - One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- 96 tests, no test dependencies
+- 112 tests, no test dependencies
 
 Not working yet — and not pretended to:
 
-- No overlays or OBS browser sources (Phase 5)
-- No alerts (Phase 6), no live events (Phase 7)
+- Alerts are not yet configurable — one built-in style, no sounds (Phase 6)
+- No overlay editor or widgets beyond alerts (Phase 6)
+- No real Twitch events yet; alerts fire from tests only (Phase 7)
 - No AI generation (Phase 8 / 9)
 
 The dashboard shows **empty states rather than sample metrics**. Displaying a

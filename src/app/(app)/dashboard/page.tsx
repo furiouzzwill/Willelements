@@ -98,13 +98,13 @@ export default async function DashboardPage() {
       <Panel>
         <PanelHeader
           title="What's next"
-          description={`Phase ${CURRENT_PHASE} is done — your brand drives everything from here`}
+          description={`Phase ${CURRENT_PHASE} is done — overlays render in OBS`}
         />
         <div className="space-y-4 px-5 py-5">
           <p className="text-sm text-ink-muted">
-            Your Brand DNA is saved and will style every overlay, alert and graphic this
-            app produces. Next is connecting Twitch, so the dashboard has real data to
-            show. Take a backup from Settings whenever you want a copy of everything.
+            Overlays are working: create one, paste its URL into OBS, and test alerts play
+            through the real pipeline. Next is the alert system proper — configurable
+            follower alerts styled from your Brand DNA — and then real Twitch events.
           </p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {upcoming.map((item) => (

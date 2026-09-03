@@ -1,6 +1,6 @@
 # Overlay system
 
-**Status: planned (Phase 5–6). Not implemented.**
+**Status: runtime implemented (Phase 5). Widgets and the editor planned (Phase 6).**
 
 ## Model
 
@@ -16,6 +16,41 @@ runtime. Planned types: Alert Box, Webcam Frame, Text, Image, Video, Chat,
 Latest Follower, Latest Subscriber, Recent Events, Follower Goal, Subscriber
 Goal, Donation Goal, Countdown, Clock, Social Rotator, Viewer Count, Stream
 Labels, Media. MVP ships Alert Box, Image/logo and Text.
+
+Phase 5 renders alerts directly rather than through the widget system; Phase 6
+introduces widgets and the editor that places them.
+
+## The event stream
+
+```
+Event ──▶ bus.publish(event, overlayId)
+              │
+              ▼
+        subscribers for that overlay
+              │
+              ▼  text/event-stream
+        EventSource in the browser source
+              │
+              ▼
+        alert queue ──▶ one alert at a time
+```
+
+The bus is an in-process subscriber list, not a broker — everything runs in one
+Node process on one machine. That is the reason a local install has lower alert
+latency than a hosted one: nothing leaves the machine.
+
+`publish` returns how many connections received the event, which is what lets
+the dashboard say "nothing is listening" rather than appearing to succeed.
+
+Details that matter for OBS:
+
+- A `: ping` comment every 20 seconds, so nothing in between decides the
+  connection is idle and closes it.
+- `X-Accel-Buffering: no`, so a proxy cannot hold alerts and deliver them in a
+  batch several seconds late.
+- `retry: 2000`, so a dropped connection comes back in two seconds.
+- The request's abort signal unsubscribes and clears the heartbeat, so switching
+  scenes does not leak a connection.
 
 ## The OBS browser source
 

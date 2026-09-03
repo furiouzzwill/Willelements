@@ -7,7 +7,7 @@
  * rather than a dead link, so the app never lies about what works yet.
  */
 
-export const CURRENT_PHASE = 4
+export const CURRENT_PHASE = 5
 
 export type NavItem = {
   label: string
@@ -52,11 +52,10 @@ export const navigation: NavSection[] = [
     icon: 'stream',
     items: [
       { label: 'Overlays', href: '/stream/overlays', phase: 5 },
-      { label: 'Overlay Editor', href: '/stream/editor', phase: 5 },
+      { label: 'Overlay Editor', href: '/stream/editor', phase: 6 },
       { label: 'Alerts', href: '/stream/alerts', phase: 6 },
-      { label: 'Widgets', href: '/stream/widgets', phase: 5 },
-      { label: 'Scenes', href: '/stream/scenes', phase: 5 },
-      { label: 'Browser Sources', href: '/stream/browser-sources', phase: 5 },
+      { label: 'Widgets', href: '/stream/widgets', phase: 6 },
+      { label: 'Scenes', href: '/stream/scenes', phase: 7 },
       { label: 'Goals', href: '/stream/goals', phase: 6 },
       { label: 'Labels', href: '/stream/labels', phase: 6 },
     ],
