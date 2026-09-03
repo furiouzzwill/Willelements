@@ -28,8 +28,15 @@ const id = () =>
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID())
 
-const createdAt = () =>
-  text('created_at')
+/**
+ * An ISO-8601 timestamp column defaulting to now.
+ *
+ * The SQL column name is an argument rather than hardcoded: an earlier version
+ * of this helper always emitted `created_at`, which silently mapped every
+ * `updated_at` and `connected_at` field onto the wrong column.
+ */
+const timestamp = (column: string) =>
+  text(column)
     .notNull()
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`)
 
@@ -44,8 +51,8 @@ export const brands = sqliteTable('brands', {
   dna: text('dna', { mode: 'json' }).notNull().default(sql`'{}'`),
   logoAssetId: text('logo_asset_id'),
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
-  createdAt: createdAt(),
-  updatedAt: createdAt(),
+  createdAt: timestamp('created_at'),
+  updatedAt: timestamp('updated_at'),
 })
 
 /** Uploaded and generated files. The bytes live under ./data/assets. */
@@ -71,7 +78,7 @@ export const assets = sqliteTable(
     model: text('model'),
     approved: integer('approved', { mode: 'boolean' }).notNull().default(false),
     favorite: integer('favorite', { mode: 'boolean' }).notNull().default(false),
-    createdAt: createdAt(),
+    createdAt: timestamp('created_at'),
   },
   (table) => [index('assets_type_idx').on(table.type)],
 )
@@ -92,9 +99,9 @@ export const overlays = sqliteTable(
      * anything that references the overlay.
      */
     publicToken: text('public_token').notNull(),
-    tokenRotatedAt: createdAt(),
-    createdAt: createdAt(),
-    updatedAt: createdAt(),
+    tokenRotatedAt: timestamp('token_rotated_at'),
+    createdAt: timestamp('created_at'),
+    updatedAt: timestamp('updated_at'),
   },
   (table) => [uniqueIndex('overlays_public_token_idx').on(table.publicToken)],
 )
@@ -115,7 +122,7 @@ export const overlayWidgets = sqliteTable(
     height: integer('height').notNull().default(200),
     zIndex: integer('z_index').notNull().default(0),
     locked: integer('locked', { mode: 'boolean' }).notNull().default(false),
-    createdAt: createdAt(),
+    createdAt: timestamp('created_at'),
   },
   (table) => [index('overlay_widgets_overlay_idx').on(table.overlayId)],
 )
@@ -137,8 +144,8 @@ export const alertConfigs = sqliteTable(
     }),
     minThreshold: integer('min_threshold'),
     enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-    createdAt: createdAt(),
-    updatedAt: createdAt(),
+    createdAt: timestamp('created_at'),
+    updatedAt: timestamp('updated_at'),
   },
   (table) => [index('alert_configs_event_type_idx').on(table.eventType)],
 )
@@ -162,8 +169,8 @@ export const connectedAccounts = sqliteTable(
     refreshTokenEncrypted: text('refresh_token_encrypted'),
     tokenExpiresAt: text('token_expires_at'),
     metadata: text('metadata', { mode: 'json' }).notNull().default(sql`'{}'`),
-    connectedAt: createdAt(),
-    updatedAt: createdAt(),
+    connectedAt: timestamp('connected_at'),
+    updatedAt: timestamp('updated_at'),
   },
   (table) => [uniqueIndex('connected_accounts_provider_idx').on(table.provider)],
 )
@@ -187,7 +194,7 @@ export const streamEvents = sqliteTable(
     /** Test events travel the real pipeline but never count in analytics. */
     isTest: integer('is_test', { mode: 'boolean' }).notNull().default(false),
     occurredAt: text('occurred_at').notNull(),
-    createdAt: createdAt(),
+    createdAt: timestamp('created_at'),
   },
   (table) => [
     uniqueIndex('stream_events_dedupe_idx').on(table.provider, table.providerEventId),

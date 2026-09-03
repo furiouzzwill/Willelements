@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
 
+import { LiveStatus, RecentFollowers } from '@/app/(app)/dashboard/live-status'
 import { PageHeader } from '@/components/shell/page-header'
-import { EmptyState, Panel, PanelHeader } from '@/components/ui/panel'
+import { Panel, PanelHeader } from '@/components/ui/panel'
 import { ButtonLink } from '@/components/ui/button'
 import { Icon } from '@/components/ui/icon'
 import { CURRENT_PHASE, navigation } from '@/config/navigation'
 import { getDefaultBrand } from '@/lib/services/brand-service'
 import { getSetupState } from '@/lib/services/setup-service'
+import { getChannelState } from '@/lib/services/twitch-service'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -47,9 +49,10 @@ function SetupRow({ done, label, phase }: { done: boolean; label: string; phase:
  * and audience come from a connected platform (Phase 4 and 7) — the rule is
  * that we never show a number no provider actually gave us.
  */
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const brand = getDefaultBrand()
   const setup = getSetupState()
+  const channel = await getChannelState()
 
   // The next destinations to unlock, whichever phases they fall in. Labels are
   // deduplicated because some names appear under more than one section — a list
@@ -88,21 +91,8 @@ export default function DashboardPage() {
       </Panel>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Panel>
-          <PanelHeader title="Live status" description="Your connected platform" />
-          <EmptyState
-            title="No platform connected"
-            description="Twitch connection arrives in Phase 4. Until then there is no live status to report — and we will not guess one."
-          />
-        </Panel>
-
-        <Panel>
-          <PanelHeader title="Recent activity" description="Follows, subs, raids, cheers" />
-          <EmptyState
-            title="No events yet"
-            description="Events land here once Twitch is connected and streaming to this machine."
-          />
-        </Panel>
+        <LiveStatus state={channel} />
+        <RecentFollowers state={channel} />
       </div>
 
       <Panel>

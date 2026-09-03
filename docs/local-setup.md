@@ -50,11 +50,26 @@ that needs a key:
 | Variable | Needed from | For |
 | --- | --- | --- |
 | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | Phase 4 | Connecting Twitch |
-| `TOKEN_ENCRYPTION_KEY` | Phase 4 | Encrypting provider tokens at rest |
+| `TOKEN_ENCRYPTION_KEY` | Optional | Overrides the auto-generated key |
 | `OPENAI_API_KEY` | Phase 9 | Image generation (the only paid part) |
 | `APP_URL` | If not on port 3000 | Overlay and OAuth URLs |
 
-Generate an encryption key with:
+## Connecting Twitch
+
+1. Register an app at [dev.twitch.tv/console](https://dev.twitch.tv/console/apps/create)
+2. OAuth Redirect URL — exactly this, Twitch matches it character for character:
+   `http://localhost:3000/api/twitch/callback`
+3. Client Type: **Confidential**
+4. Put the Client ID and Secret in `.env.local`, restart, then press Connect on
+   **Integrations → Twitch**
+
+Tokens are encrypted before they are stored. The key lives in `data/.token-key`
+and is generated on first use — it is deliberately outside the database, so a
+copied `app.db` or a backup zip does not carry your channel credentials with it.
+
+If you lose that key, reconnect Twitch. Nothing else is affected.
+
+To keep the key somewhere else, set `TOKEN_ENCRYPTION_KEY` instead:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -97,6 +112,14 @@ overlay URLs are generated correctly.
 
 **Starting over.** Stop the app, delete `data/`, start it again. A fresh
 starter brand is created automatically.
+
+**Twitch says the redirect URL is invalid.** It must match your registered app
+exactly — same scheme, host, port and path, no trailing slash. If you run on a
+port other than 3000, set `APP_URL` to match and register that URL with Twitch.
+
+**"Reconnect the platform".** The stored token could not be read or was
+rejected. Usually a changed `TOKEN_ENCRYPTION_KEY`, a Twitch password change, or
+the app being disconnected from your Twitch account. Press Connect again.
 
 **Restore did not seem to take.** Restoring closes the database connection and
 replaces the file, so it should apply immediately. If the app was mid-write,

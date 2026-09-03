@@ -169,7 +169,10 @@ export async function saveAsset(input: SaveAssetInput): Promise<Asset> {
   // from the original filename reaches the filesystem.
   const digest = createHash('sha256').update(bytes).digest('hex').slice(0, 32)
   const fileName = `${digest}.${detected.extension}`
-  const absolutePath = path.join(ASSETS_DIR, fileName)
+  // turbopackIgnore: the data directory is chosen at runtime (WILLELEMENTS_DATA_DIR),
+  // so static analysis cannot resolve it and would otherwise trace the whole
+  // project into the server bundle.
+  const absolutePath = path.join(/* turbopackIgnore: true */ ASSETS_DIR, fileName)
 
   // Don't rely on the database module having created this. It is idempotent,
   // and it means an upload still works if the folder was removed by hand or
@@ -210,7 +213,7 @@ export function listAssets(type?: string): Asset[] {
 
 /** Absolute path for an asset's bytes. */
 export function assetPath(asset: Asset): string {
-  return path.join(ASSETS_DIR, asset.filePath)
+  return path.join(/* turbopackIgnore: true */ ASSETS_DIR, asset.filePath)
 }
 
 /**
@@ -236,7 +239,7 @@ export async function deleteAsset(id: string): Promise<void> {
     .get()
 
   if (!stillUsed) {
-    await unlink(path.join(ASSETS_DIR, asset.filePath)).catch(() => {
+    await unlink(path.join(/* turbopackIgnore: true */ ASSETS_DIR, asset.filePath)).catch(() => {
       // Already gone — the row is what mattered.
     })
   }

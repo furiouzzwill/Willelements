@@ -148,7 +148,7 @@ bundle.
 
 | Secret | Where | Reaches the browser? |
 | --- | --- | --- |
-| Twitch OAuth tokens | `connected_accounts`, encrypted at rest | Never |
+| Twitch OAuth tokens | `connected_accounts`, AES-256-GCM at rest | Never |
 | `TOKEN_ENCRYPTION_KEY` | Environment | Never |
 | OpenAI API key | Environment | Never |
 | Overlay public token | In the OBS URL | Yes — opaque, rotatable |
@@ -160,6 +160,16 @@ route handler, and never placed in an overlay URL.
 Server-only modules import `server-only`, which turns a mistaken client import
 into a build error. This is verified, not assumed — importing the database layer
 into a Client Component fails the build.
+
+Only `connected-account-service` ever handles a plaintext provider token. What
+it hands to the rest of the app is an `AccountSummary` with no token fields at
+all, so there is no route, page or log line that could leak one. Token request
+failures deliberately discard the response body, which can echo the credential
+back.
+
+The OAuth `state` is validated **before** the authorization code is exchanged,
+so a forged callback never causes a token request. The state cookie is
+HTTP-only and single-use — cleared whether the comparison passes or fails.
 
 ---
 
@@ -204,8 +214,8 @@ no return.
 | Runs locally, no account | ✅ | No auth layer at all |
 | Zero running cost | ✅ | Only OpenAI (Phase 9) ever costs money |
 | Persistent storage | ✅ | SQLite + files in `data/` |
-| Twitch OAuth | ✅ | Loopback redirect to localhost |
-| Twitch events | ✅ | EventSub **WebSocket** — no public URL needed |
+| Twitch OAuth | ✅ | Implemented — loopback redirect, encrypted tokens |
+| Twitch events | ✅ | EventSub **WebSocket** — no public URL needed (Phase 7) |
 | OBS browser sources | ✅ | Lean route, opaque token, SSE |
 | Brand DNA | ✅ | JSON columns on `brands` |
 | HyperFrames | ⚠️ | Not installed — risk R1 |
@@ -240,10 +250,15 @@ names change; `channel.follow` has changed its authorisation requirements
 before. Every provider phase begins by reading current official documentation.
 Nothing in these docs is verified API behaviour.
 
-**R6 — Token encryption key management.** Encrypting tokens at rest only helps
-if the key is not sitting beside the database. Phase 4 must decide where it
-lives and what happens when it is lost — probably "reconnect the platform",
-which is an acceptable answer that needs to be an explicit one.
+**R6 — Token encryption key management.** *Resolved in Phase 4.* Provider tokens
+are sealed with AES-256-GCM. The key lives in `data/.token-key`, mode 0600,
+generated on first use, and can be overridden with `TOKEN_ENCRYPTION_KEY`. It is
+outside the database, so a copied `app.db` — or a backup zip shared for support
+— does not hand over control of the channel.
+
+Losing the key means reconnecting Twitch, and nothing else. That is the
+deliberate trade, and the app states it: an unreadable token surfaces as
+"reconnect the platform", not as an error.
 
 **R7 — Native module portability.** `better-sqlite3` compiles per platform and
 Node version. It installs from a prebuilt binary on common setups, but a Node

@@ -41,5 +41,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local database and assets — this is your data, not the project's
+# local database, assets and the token encryption key — yours, not the project's
 /data

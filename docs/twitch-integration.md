@@ -1,13 +1,45 @@
 # Twitch integration
 
-**Status: planned (Phase 4 connection, Phase 7 events). Not implemented.**
+**Status: connection implemented (Phase 4). Events planned (Phase 7).**
 
 > ⚠️ **Read the current official documentation before writing any code**:
 > <https://dev.twitch.tv/docs/>
 >
-> Endpoints, OAuth scopes and event names change. `channel.follow` in particular
-> has changed its authorisation requirements in the past. Nothing in this
-> document is verified API behaviour — it is a plan.
+> Endpoints, OAuth scopes and event names change. The Phase 4 sections below
+> were verified against the official docs at implementation time; the Phase 7
+> sections are still a plan and must be re-checked before they are built.
+
+## Setting it up
+
+1. Register an app at <https://dev.twitch.tv/console/apps/create>
+2. OAuth Redirect URL: `http://localhost:3000/api/twitch/callback` — Twitch
+   matches this character for character, so a trailing slash or a different port
+   will fail
+3. Client Type: **Confidential**
+4. Put the Client ID and Secret in `.env.local` as `TWITCH_CLIENT_ID` and
+   `TWITCH_CLIENT_SECRET`, then restart
+
+The app shows these same steps at `/integrations/twitch` when credentials are
+missing.
+
+## What was verified
+
+| Thing | Detail |
+| --- | --- |
+| Authorize | `https://id.twitch.tv/oauth2/authorize` — client_id, response_type=code, redirect_uri, space-delimited scope, state |
+| Token | `POST https://id.twitch.tv/oauth2/token` form-encoded, grant_type=authorization_code |
+| Refresh | Same URL, grant_type=refresh_token. **Returns a new refresh token** |
+| Revoke | `POST https://id.twitch.tv/oauth2/revoke` — client_id, token |
+| Helix auth | `Authorization: Bearer <token>` plus `Client-Id` |
+| localhost | `http://localhost:PORT` redirects are permitted |
+
+**The refresh token rotates.** This is the detail most likely to be missed:
+persisting the token we sent rather than the one returned works exactly once,
+and then the connection fails with nothing obvious to point at.
+
+Refresh tokens for confidential clients do not expire on a timer, but are
+invalidated when the user changes their password or disconnects the app. A 401
+on refresh means re-authorisation, which the UI surfaces as "reconnect".
 
 ## Scope of work
 

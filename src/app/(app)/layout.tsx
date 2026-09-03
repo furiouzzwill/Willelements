@@ -1,6 +1,7 @@
 import { Sidebar } from '@/components/shell/sidebar'
 import { Topbar } from '@/components/shell/topbar'
 import { getDefaultBrand } from '@/lib/services/brand-service'
+import { getChannelState } from '@/lib/services/twitch-service'
 
 /**
  * Application shell.
@@ -10,8 +11,9 @@ import { getDefaultBrand } from '@/lib/services/brand-service'
  */
 export const dynamic = 'force-dynamic'
 
-export default function AppLayout({ children }: LayoutProps<'/'>) {
+export default async function AppLayout({ children }: LayoutProps<'/'>) {
   const brand = getDefaultBrand()
+  const channel = await getChannelState()
 
   return (
     <div className="flex min-h-dvh">
@@ -22,7 +24,14 @@ export default function AppLayout({ children }: LayoutProps<'/'>) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar brandName={brand?.name ?? null} />
+        <Topbar
+          brandName={brand?.name ?? null}
+          connection={
+            channel.status === 'ok'
+              ? { name: channel.displayName, isLive: channel.live.isLive }
+              : null
+          }
+        />
         <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl space-y-8">{children}</div>
         </main>

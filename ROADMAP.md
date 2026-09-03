@@ -3,7 +3,7 @@
 Each phase is focused, testable and shippable. A phase is not complete until
 typecheck, lint and build all pass and its exit criteria are demonstrably met.
 
-**Current position: Phase 3 complete.**
+**Current position: Phase 4 complete.**
 
 ---
 
@@ -110,19 +110,40 @@ ever removed. It now ensures the directory itself.
 
 ---
 
-## Phase 4 — Twitch connection
+## Phase 4 — Twitch connection ✅
 
-> Read the current official Twitch documentation first.
+Official docs were read before any code was written. What that changed:
 
-- [ ] Confirm current OAuth flow, scopes and endpoints
-- [ ] Authorisation code flow with a **localhost redirect**
-- [ ] Token encryption at rest; decide key management (risk R6)
-- [ ] Token refresh ahead of expiry
-- [ ] Import channel information; show live status
-- [ ] Connect / disconnect UI
+- Refresh **rotates the refresh token**. Storing the one we sent would work
+  exactly once and then the connection would die with nothing to point at.
+- `channel.follow` v2 requires `moderator:read:followers` — which is also the
+  only scope we need, so that is the entire request.
+- `channels/followers` always returns `total`, but only returns the follower
+  list to the broadcaster. An empty list means "not authorised", not "none".
 
-**Exit:** Twitch connects, the channel appears, disconnect works cleanly, and no
-token is readable from the database file alone.
+- [x] Authorisation code flow with a localhost redirect, derived in one place
+      because Twitch matches it character for character
+- [x] CSRF state in a single-use HTTP-only cookie, validated **before** the code
+      is exchanged so a forged callback never triggers a token request
+- [x] AES-256-GCM encryption at rest, key held outside the database in
+      `data/.token-key`, generated on first use (risk R6 resolved)
+- [x] Refresh five minutes ahead of expiry, persisting the rotated token
+- [x] Rejected refresh becomes "reconnect", not a crash
+- [x] Disconnect revokes with Twitch before forgetting locally
+- [x] Live status, follower count and recent follows on the dashboard
+- [x] Connect / disconnect UI, with setup instructions when credentials are absent
+
+**Exit met**, except for one step that needs your credentials: the OAuth flow
+was exercised end to end against a stubbed Twitch and, with fake credentials,
+against the real Twitch endpoint up to the token exchange. **The exchange itself
+has not run against real Twitch** — that needs a registered app.
+
+A significant bug this phase found: a shared timestamp helper in the Drizzle
+schema hardcoded the column name `created_at`, so every `updated_at`,
+`connected_at` and `token_rotated_at` field was mapped to the wrong column —
+silently overwriting `created_at` on tables that had one, and failing outright
+on `connected_accounts`. A general schema/migration agreement test now checks
+every column of every table.
 
 ---
 

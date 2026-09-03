@@ -7,7 +7,7 @@
  * rather than a dead link, so the app never lies about what works yet.
  */
 
-export const CURRENT_PHASE = 3
+export const CURRENT_PHASE = 4
 
 export type NavItem = {
   label: string
@@ -90,8 +90,8 @@ export const navigation: NavSection[] = [
     label: 'Analytics',
     icon: 'analytics',
     items: [
-      { label: 'Overview', href: '/analytics', phase: 4 },
-      { label: 'Twitch', href: '/analytics/twitch', phase: 4 },
+      { label: 'Overview', href: '/analytics', phase: 7 },
+      { label: 'Twitch', href: '/analytics/twitch', phase: 7 },
       { label: 'YouTube', href: '/analytics/youtube', phase: 10 },
       { label: 'Streams', href: '/analytics/streams', phase: 7 },
       { label: 'Audience', href: '/analytics/audience', phase: 7 },
@@ -127,7 +127,7 @@ export const navigation: NavSection[] = [
     icon: 'settings',
     items: [
       { label: 'Storage', href: '/settings', phase: 1 },
-      { label: 'Connected Accounts', href: '/settings/connections', phase: 4 },
+      { label: 'Connected Accounts', href: '/integrations/twitch', phase: 4 },
       { label: 'Notifications', href: '/settings/notifications', phase: 6 },
     ],
   },
