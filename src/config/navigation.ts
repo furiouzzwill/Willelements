@@ -7,7 +7,7 @@
  * rather than a dead link, so the app never lies about what works yet.
  */
 
-export const CURRENT_PHASE = 1
+export const CURRENT_PHASE = 2
 
 export type NavItem = {
   label: string

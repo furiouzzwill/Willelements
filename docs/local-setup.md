@@ -27,8 +27,13 @@ data/
 └── assets/         uploaded and generated files
 ```
 
-- **Back up:** copy the whole `data/` folder. Do it while the app is stopped so
-  the WAL is checkpointed.
+- **Back up:** use **Settings → Backup → Download backup**. It produces a zip of
+  the database and every asset, captured as a consistent snapshot, so it is safe
+  to do while the app is running. Copying the `data/` folder by hand also works,
+  but stop the app first so the write-ahead log is checkpointed.
+- **Restore:** **Settings → Backup**, choose the zip, confirm. Your current
+  database is saved beside the restored one as `app.db.before-restore-…`, so
+  restoring the wrong file is recoverable.
 - **Move machines:** copy the folder, install dependencies on the new machine,
   run.
 - **Start fresh:** delete the folder. It is recreated on next run.
@@ -90,4 +95,10 @@ npm rebuild better-sqlite3
 **Port 3000 is taken.** `npm run dev -- -p 3001`, and set `APP_URL` to match so
 overlay URLs are generated correctly.
 
-**Starting over.** Stop the app, delete `data/`, start it again.
+**Starting over.** Stop the app, delete `data/`, start it again. A fresh
+starter brand is created automatically.
+
+**Restore did not seem to take.** Restoring closes the database connection and
+replaces the file, so it should apply immediately. If the app was mid-write,
+restart it — and check for an `app.db.before-restore-…` file, which is your
+previous data.

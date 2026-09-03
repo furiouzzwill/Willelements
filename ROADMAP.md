@@ -3,7 +3,7 @@
 Each phase is focused, testable and shippable. A phase is not complete until
 typecheck, lint and build all pass and its exit criteria are demonstrably met.
 
-**Current position: Phase 1 complete.**
+**Current position: Phase 2 complete.**
 
 ---
 
@@ -53,17 +53,31 @@ expanding into anything else.
 
 ---
 
-## Phase 2 — Data foundations
+## Phase 2 — Data foundations ✅
 
-- [ ] Zod schemas for every JSON column (Brand DNA, widget config, alert spec)
-- [ ] Typed read/write helpers so JSON columns are never `any`
-- [ ] Seed a default brand on first run, so the app is never empty
-- [ ] Asset storage: write to `data/assets`, validate MIME type and size
-- [ ] Export / import the whole data folder as a zip (risk R4)
-- [ ] A few tests around migrations and the dedupe constraint
+- [x] Zod schemas for every JSON column: Brand DNA, widget config, alert spec,
+      normalized event
+- [x] Typed read/write helpers — reads fall back to defaults and warn, writes
+      are strict, so no JSON column is ever `any`
+- [x] Full brand service: create, update, delete, set default
+- [x] A starter brand seeded on first run, synchronously during connection setup
+- [x] Asset storage with **content-sniffed** type detection, a 25 MB cap and
+      generated content-addressed filenames
+- [x] Asset serving route, immutable-cached, no path-traversal surface
+- [x] Backup export and restore as a single zip (risk R4)
+- [x] 40 tests via `node:test` — zero test dependencies
 
-**Exit:** a brand can be created, edited and read back with full type safety,
-and the data folder can be exported and restored.
+**Exit met:** a brand round-trips with full type safety, and the data folder
+exports and restores.
+
+Two bugs this phase found and fixed:
+
+- Restoring a backup left the *old* write-ahead log in place, which SQLite then
+  replayed over the restored database — silently undoing the restore. The
+  connection is now closed and the stale WAL removed before the file is
+  replaced.
+- The database opened at module load, so `next build` created a data directory
+  as a side effect, and parallel build workers raced the migration.
 
 ---
 

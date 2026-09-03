@@ -101,12 +101,13 @@ export default function DashboardPage() {
       <Panel>
         <PanelHeader
           title="What's next"
-          description={`Phase ${CURRENT_PHASE} is done — local storage is working`}
+          description={`Phase ${CURRENT_PHASE} is done — validated storage, assets and backups`}
         />
         <div className="space-y-4 px-5 py-5">
           <p className="text-sm text-ink-muted">
             The app, its database and its files all live in this project folder. Nothing
-            is sent anywhere, and nothing costs money to run.
+            is sent anywhere, and nothing costs money to run. Take a backup from Settings
+            whenever you want a copy of everything.
           </p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {upcoming.map((item) => (

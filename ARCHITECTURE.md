@@ -66,6 +66,9 @@ connection is OBS on the same machine.
 - Migrations are hand-written SQL tracked by SQLite's own `user_version`. No
   migration CLI — which also means no `drizzle-kit`, and no dependency
   advisories from it. Append-only: never edit a shipped migration.
+- Replacing the database file requires closing the connection first. An open
+  connection holds a write-ahead log describing the *old* database, and SQLite
+  will replay it over the restored one — a bug the backup tests caught.
 - Migrations take the write lock with `BEGIN IMMEDIATE` and re-read
   `user_version` inside it, because `next build` runs several workers that each
   open the database.
@@ -226,9 +229,11 @@ real operational property: start it before going live, and Phase 6 should make
 the overlay visibly indicate a lost connection rather than silently doing
 nothing.
 
-**R4 — One machine, no redundancy.** The data folder is the only copy unless you
-back it up. Phase 2 should add an export, and the README should keep saying
-"copy the folder" until it does.
+**R4 — One machine, no redundancy.** *Mitigated in Phase 2.* Settings exports a
+zip of the database and every asset, and restores one. The database is captured
+with SQLite's backup API rather than a file copy, so a snapshot taken while the
+app is running is consistent. Taking a backup is still a manual act — nothing
+schedules it, and nothing stores a copy off this machine.
 
 **R5 — Provider API drift.** Twitch and YouTube endpoints, scopes and event
 names change; `channel.follow` has changed its authorisation requirements

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import path from 'node:path'
 
+import { BackupPanel } from '@/app/(app)/settings/backup-panel'
 import { PageHeader } from '@/components/shell/page-header'
 import { Panel, PanelHeader } from '@/components/ui/panel'
 import { DATA_DIR } from '@/lib/db'
@@ -53,6 +54,8 @@ export default function SettingsPage() {
           <Row label="Stream events" value={String(stats.streamEvents)} />
         </div>
       </Panel>
+
+      <BackupPanel />
 
       <Panel>
         <PanelHeader title="Application" />

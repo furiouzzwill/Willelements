@@ -13,17 +13,21 @@ single folder you own.
 
 ## Current status
 
-**Phase 1 — Foundation. Complete and validated.**
+**Phase 2 — Data foundations. Complete and validated.**
 
 Working today:
 
 - Next.js 16 App Router + TypeScript + Tailwind v4
-- Local SQLite database, created and migrated automatically on first run
+- Local SQLite database, created, migrated and seeded automatically on first run
 - Full schema: brands, assets, overlays, widgets, alert configs, connected
   accounts, stream events
+- Validated Brand DNA, alert specs, widget configs and events — every JSON
+  column is schema-checked on the way in and out
+- Asset storage that identifies files by content rather than by their name
+- One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- Storage settings showing exactly where your data lives
+- 40 tests, no test dependencies
 
 Not working yet — and not pretended to:
 
@@ -61,7 +65,8 @@ provider key — none are required to run the app.
 | `npm run start` | Serve the production build |
 | `npm run typecheck` | Generate route types, then `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm run check` | Typecheck + lint — run before every commit |
+| `npm test` | Run the test suite |
+| `npm run check` | Typecheck + lint + tests — run before every commit |
 
 ---
 
@@ -112,11 +117,14 @@ src/
 │   ├── shell/             Sidebar, topbar, page header
 │   └── ui/                Button, field, panel, icons
 ├── config/navigation.ts   Product information architecture
-└── lib/
-    ├── db/                SQLite connection, schema, migrations
-    ├── services/          Brand, setup — feature logic lives here
-    ├── env.ts             Optional configuration
-    └── utils.ts
+├── lib/
+│   ├── db/                SQLite connection, schema, migrations, JSON helpers
+│   ├── schemas/           Zod schemas for every JSON column
+│   ├── services/          Brand, asset, backup, setup — feature logic
+│   ├── env.ts             Optional configuration
+│   └── utils.ts
+└── ...
+tests/                     node:test suites
 ```
 
 Later phases add `src/app/overlay/` (the OBS browser sources) and more services.
