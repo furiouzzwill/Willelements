@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/**
+ * Product design system.
+ *
+ * These tokens style the *platform* — the chrome a creator works inside. They
+ * are deliberately independent from Brand DNA, which styles the creator's own
+ * overlays and generated assets (Phase 3). Never wire a creator's brand colours
+ * into these variables: the app must look the same for every account, and the
+ * creator's brand must look like theirs.
+ *
+ * The product is dark-first. A light theme is a later concern; overlays render
+ * on transparent backgrounds and are unaffected either way.
+ */
+
+@theme {
+  --color-canvas: oklch(0.16 0.012 275);
+  --color-surface: oklch(0.2 0.014 275);
+  --color-surface-raised: oklch(0.245 0.016 275);
+  --color-line: oklch(0.31 0.016 275);
+  --color-line-strong: oklch(0.39 0.02 275);
+
+  --color-ink: oklch(0.97 0.004 275);
+  --color-ink-muted: oklch(0.75 0.014 275);
+  --color-ink-subtle: oklch(0.6 0.016 275);
+
+  --color-accent: oklch(0.68 0.19 305);
+  --color-accent-strong: oklch(0.62 0.21 305);
+  --color-accent-soft: oklch(0.3 0.08 305);
+  --color-accent-ink: oklch(0.99 0 0);
+
+  --color-live: oklch(0.68 0.2 20);
+  --color-positive: oklch(0.75 0.16 155);
+  --color-warning: oklch(0.79 0.15 75);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", monospace;
+
+  --radius-panel: 0.875rem;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Keyboard focus must stay visible everywhere in a tool people use live. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-soft);
+    color: var(--color-ink);
+  }
+}
+
+@utility panel {
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--color-line);
+  background-color: var(--color-surface);
+}
+
+/**
+ * The ambient glow behind the marketing and auth screens. Kept as a single
+ * static gradient rather than animated effects — it costs nothing to paint.
+ */
+@utility aurora {
+  background-image:
+    radial-gradient(60rem 40rem at 12% -10%, oklch(0.4 0.16 305 / 0.28), transparent 60%),
+    radial-gradient(50rem 34rem at 92% 6%, oklch(0.42 0.14 255 / 0.22), transparent 62%);
+}
