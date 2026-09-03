@@ -13,7 +13,7 @@ single folder you own.
 
 ## Current status
 
-**Phase 2 — Data foundations. Complete and validated.**
+**Phase 3 — Brand system. Complete and validated.**
 
 Working today:
 
@@ -23,11 +23,15 @@ Working today:
   accounts, stream events
 - Validated Brand DNA, alert specs, widget configs and events — every JSON
   column is schema-checked on the way in and out
-- Asset storage that identifies files by content rather than by their name
+- **Brand Studio** — identity, colours, typography, visual and motion style, and
+  brand rules, with a live preview of how a follower alert will look
+- **Logo upload** and an asset library, with files identified by content rather
+  than by name
+- First-run onboarding
 - One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- 40 tests, no test dependencies
+- 56 tests, no test dependencies
 
 Not working yet — and not pretended to:
 

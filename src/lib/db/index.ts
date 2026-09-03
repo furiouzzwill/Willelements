@@ -7,6 +7,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 
 import { migrate } from '@/lib/db/migrations'
 import * as schema from '@/lib/db/schema'
+import { STARTER_BRAND_NAME } from '@/lib/db/constants'
 import { defaultBrandDna } from '@/lib/schemas/brand'
 
 /**
@@ -44,7 +45,7 @@ function seed(sqlite: Database.Database): boolean {
 
   sqlite
     .prepare('INSERT INTO brands (id, name, creator_type, dna, is_default) VALUES (?, ?, ?, ?, 1)')
-    .run(crypto.randomUUID(), 'My Brand', 'streamer', JSON.stringify(defaultBrandDna()))
+    .run(crypto.randomUUID(), STARTER_BRAND_NAME, 'streamer', JSON.stringify(defaultBrandDna()))
 
   return true
 }

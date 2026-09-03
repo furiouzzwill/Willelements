@@ -2,10 +2,11 @@ import 'server-only'
 
 import { existsSync, statSync } from 'node:fs'
 import path from 'node:path'
-import { count } from 'drizzle-orm'
+import { count, eq } from 'drizzle-orm'
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 
 import { DATA_DIR, getDb } from '@/lib/db'
+import { STARTER_BRAND_NAME } from '@/lib/db/constants'
 import {
   alertConfigs,
   assets,
@@ -24,6 +25,8 @@ import {
 export type SetupState = {
   databaseReady: boolean
   hasBrand: boolean
+  hasNamedBrand: boolean
+  hasLogo: boolean
   hasConnectedAccount: boolean
   hasOverlay: boolean
   hasAlertConfig: boolean
@@ -34,10 +37,25 @@ function rowCount(table: SQLiteTable): number {
 }
 
 export function getSetupState(): SetupState {
+  const db = getDb()
+
+  // A brand exists on every install because one is seeded. What tells us the
+  // creator has actually been through setup is whether they renamed it.
+  const seededName = db
+    .select({ name: brands.name })
+    .from(brands)
+    .where(eq(brands.name, STARTER_BRAND_NAME))
+    .limit(1)
+    .get()
+
   return {
     // Reaching this function at all means the database opened and migrated.
     databaseReady: true,
     hasBrand: rowCount(brands) > 0,
+    hasNamedBrand: rowCount(brands) > 0 && seededName === undefined,
+    hasLogo:
+      db.select({ id: assets.id }).from(assets).where(eq(assets.type, 'logo')).limit(1).get() !==
+      undefined,
     hasConnectedAccount: rowCount(connectedAccounts) > 0,
     hasOverlay: rowCount(overlays) > 0,
     hasAlertConfig: rowCount(alertConfigs) > 0,
@@ -61,4 +79,9 @@ export function getStorageStats() {
     alertConfigs: rowCount(alertConfigs),
     streamEvents: rowCount(streamEvents),
   }
+}
+
+/** True until the creator has set up their brand. Drives the welcome screen. */
+export function needsOnboarding(): boolean {
+  return !getSetupState().hasNamedBrand
 }

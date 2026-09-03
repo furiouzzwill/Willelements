@@ -2,9 +2,19 @@ import type { ComponentProps } from 'react'
 
 import { cn } from '@/lib/utils'
 
-export function Label({ className, ...props }: ComponentProps<'label'>) {
+/**
+ * Renders a `<label>` by default, or a `<span>` when the control it names is a
+ * group rather than a single input — a label pointing at nothing is worse for
+ * a screen reader than plain text beside a properly-labelled fieldset.
+ */
+export function Label({
+  className,
+  as,
+  ...props
+}: ComponentProps<'label'> & { as?: 'label' | 'span' }) {
+  const Component = as ?? 'label'
   return (
-    <label
+    <Component
       className={cn('block text-sm font-medium text-ink-muted', className)}
       {...props}
     />

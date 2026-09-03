@@ -3,7 +3,7 @@
 Each phase is focused, testable and shippable. A phase is not complete until
 typecheck, lint and build all pass and its exit criteria are demonstrably met.
 
-**Current position: Phase 2 complete.**
+**Current position: Phase 3 complete.**
 
 ---
 
@@ -81,15 +81,32 @@ Two bugs this phase found and fixed:
 
 ---
 
-## Phase 3 — Brand system
+## Phase 3 — Brand system ✅
 
-- [ ] Brand Studio: identity, colours, typography, visual style, motion style
-- [ ] Logo upload with validation; variants; primary selection
-- [ ] Brand rules (prefer / avoid)
-- [ ] Asset library
-- [ ] First-run onboarding
+- [x] Brand Studio: identity, colours, typography, visual style, motion style
+- [x] Live preview — a follower alert rendered in your brand, updating as you
+      edit, before you save
+- [x] Logo upload through the validated asset pipeline, with primary selection
+      and a transparency checkerboard so you can judge it against stream footage
+- [x] Personality and prefer/avoid rules as free text, since the useful entries
+      are specific in a way a fixed list could not anticipate
+- [x] Asset library
+- [x] First-run onboarding — three fields, then straight into the studio
+- [x] Form primitives: colour field, tag input, choice groups, select, textarea
 
-**Exit:** a complete Brand DNA is saved and survives a restart.
+**Exit met:** a complete Brand DNA is saved, survives a restart, and drives the
+preview. Verified by driving the real UI in a browser: fresh install →
+onboarding → Brand Studio → save DNA → upload logo → logo appears in the
+preview and the library.
+
+Design note: colours, fonts, visual style, motion style and rules are sections
+of one Brand Studio page rather than five separate routes. They are edited
+together against one preview, and splitting them would have meant five
+near-empty screens.
+
+A bug this phase found: `saveAsset` relied on the database module having created
+the assets directory, so an upload would fail with ENOENT if that folder was
+ever removed. It now ensures the directory itself.
 
 ---
 

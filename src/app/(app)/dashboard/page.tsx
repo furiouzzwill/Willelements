@@ -51,19 +51,25 @@ export default function DashboardPage() {
   const brand = getDefaultBrand()
   const setup = getSetupState()
 
-  // The next destinations to unlock, whichever phases they happen to fall in.
-  const upcoming = navigation
-    .flatMap((section) => section.items)
-    .filter((item) => item.phase > CURRENT_PHASE)
-    .sort((a, b) => a.phase - b.phase)
-    .slice(0, 4)
+  // The next destinations to unlock, whichever phases they fall in. Labels are
+  // deduplicated because some names appear under more than one section — a list
+  // showing "Twitch" twice reads as a bug.
+  const upcoming = [
+    ...new Map(
+      navigation
+        .flatMap((section) => section.items)
+        .filter((item) => item.phase > CURRENT_PHASE)
+        .sort((a, b) => a.phase - b.phase)
+        .map((item) => [item.label, item]),
+    ).values(),
+  ].slice(0, 4)
 
   return (
     <>
       <PageHeader
         title={`${greeting(new Date())}${brand ? `, ${brand.name}` : ''}`}
         description={
-          setup.hasBrand
+          setup.hasNamedBrand
             ? 'Connect a platform to start seeing live data.'
             : 'Everything runs on this machine. Start by setting up your brand.'
         }
@@ -73,7 +79,8 @@ export default function DashboardPage() {
         <PanelHeader title="Setup" description="What's ready and what's next" />
         <ul>
           <SetupRow done={setup.databaseReady} label="Local database created" phase={2} />
-          <SetupRow done={setup.hasBrand} label="Brand DNA saved" phase={3} />
+          <SetupRow done={setup.hasNamedBrand} label="Brand set up" phase={3} />
+          <SetupRow done={setup.hasLogo} label="Logo uploaded" phase={3} />
           <SetupRow done={setup.hasConnectedAccount} label="Twitch connected" phase={4} />
           <SetupRow done={setup.hasOverlay} label="Overlay created" phase={5} />
           <SetupRow done={setup.hasAlertConfig} label="Follower alert configured" phase={6} />
@@ -101,13 +108,13 @@ export default function DashboardPage() {
       <Panel>
         <PanelHeader
           title="What's next"
-          description={`Phase ${CURRENT_PHASE} is done — validated storage, assets and backups`}
+          description={`Phase ${CURRENT_PHASE} is done — your brand drives everything from here`}
         />
         <div className="space-y-4 px-5 py-5">
           <p className="text-sm text-ink-muted">
-            The app, its database and its files all live in this project folder. Nothing
-            is sent anywhere, and nothing costs money to run. Take a backup from Settings
-            whenever you want a copy of everything.
+            Your Brand DNA is saved and will style every overlay, alert and graphic this
+            app produces. Next is connecting Twitch, so the dashboard has real data to
+            show. Take a backup from Settings whenever you want a copy of everything.
           </p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {upcoming.map((item) => (

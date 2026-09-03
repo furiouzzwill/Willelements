@@ -117,6 +117,29 @@ export function deleteBrand(id: string): void {
   getDb().delete(brands).where(eq(brands.id, id)).run()
 }
 
+/** Sets which asset is this brand's logo. Pass null to clear it. */
+export function setBrandLogo(brandId: string, assetId: string | null): void {
+  getDb()
+    .update(brands)
+    .set({ logoAssetId: assetId, updatedAt: now() })
+    .where(eq(brands.id, brandId))
+    .run()
+}
+
+/**
+ * Clears the logo reference from any brand pointing at this asset.
+ *
+ * `brands.logo_asset_id` is deliberately not a foreign key — a brand should
+ * survive its logo being deleted — so nothing in the database does this for us.
+ */
+export function clearLogoReferences(assetId: string): void {
+  getDb()
+    .update(brands)
+    .set({ logoAssetId: null, updatedAt: now() })
+    .where(eq(brands.logoAssetId, assetId))
+    .run()
+}
+
 /**
  * Creates a starter brand the first time the app runs.
  *

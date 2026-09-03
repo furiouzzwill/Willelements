@@ -1,6 +1,6 @@
 # Brand DNA
 
-**Status: planned (Phase 3). Not implemented.**
+**Status: implemented (Phase 3).** Edit it at `/brand`.
 
 Brand DNA is the creator's persistent visual identity and the single source of
 truth for everything the platform generates on their behalf. A logo, an overlay,
@@ -37,15 +37,29 @@ enough to be useful, and versionable so a creator can see what changed.
 
 ## Studio sections
 
-| Section | Fields |
-| --- | --- |
-| Identity | Name, description, category, audience, social handles |
-| Logo | Upload or generate, variants, primary selection |
-| Colors | Primary, secondary, accent, background, text |
-| Typography | Heading, body, display/accent |
-| Visual style | Gaming, futuristic, minimal, luxury, technical, cinematic, retro, professional, energetic |
-| Motion style | Smooth, fast, cinematic, glitch, technical, fluid, explosive, minimal |
-| Rules | Prefer / avoid |
+All on one page at `/brand`, edited against a single live preview.
+
+| Section | Fields | Status |
+| --- | --- | --- |
+| Identity | Name, description, audience, creator type | ✅ |
+| Colors | Primary, secondary, accent, background, text | ✅ |
+| Typography | Heading, body | ✅ |
+| Visual style | Canvas, style, detail | ✅ |
+| Motion style | Energy, speed, character | ✅ |
+| Personality & rules | Personality, prefer, avoid | ✅ |
+| Logo | Upload, primary selection — at `/brand/logos` | ✅ |
+| Social handles | — | Later |
+| Logo generation | — | Phase 9 |
+
+### The preview
+
+The studio shows a follower alert rendered in the current brand, updating as
+you type rather than after you save. It exists because Brand DNA is otherwise
+abstract: a colour picker tells you nothing about whether your text will be
+readable over stream footage.
+
+It is illustrative, not the alert runtime. Phase 6 builds the real one inside
+the OBS browser source, where the performance rules are different.
 
 ## How it is consumed
 

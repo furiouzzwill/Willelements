@@ -7,7 +7,7 @@
  * rather than a dead link, so the app never lies about what works yet.
  */
 
-export const CURRENT_PHASE = 2
+export const CURRENT_PHASE = 3
 
 export type NavItem = {
   label: string
@@ -77,13 +77,12 @@ export const navigation: NavSection[] = [
     label: 'Brand',
     icon: 'brand',
     items: [
+      // Colours, fonts, visual style, motion style and rules are all sections
+      // of the Brand Studio rather than separate pages — they are edited
+      // together, against one preview, and splitting them would mean five
+      // near-empty screens.
       { label: 'Brand DNA', href: '/brand', phase: 3 },
       { label: 'Logos', href: '/brand/logos', phase: 3 },
-      { label: 'Colors', href: '/brand/colors', phase: 3 },
-      { label: 'Fonts', href: '/brand/fonts', phase: 3 },
-      { label: 'Visual Style', href: '/brand/visual-style', phase: 3 },
-      { label: 'Motion Style', href: '/brand/motion-style', phase: 3 },
-      { label: 'Brand Rules', href: '/brand/rules', phase: 3 },
       { label: 'Asset Library', href: '/brand/assets', phase: 3 },
     ],
   },

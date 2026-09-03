@@ -1,12 +1,13 @@
 import 'server-only'
 
 import { createHash, randomUUID } from 'node:crypto'
-import { unlink, writeFile } from 'node:fs/promises'
+import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { desc, eq } from 'drizzle-orm'
 
 import { ASSETS_DIR, getDb } from '@/lib/db'
 import { assets, type Asset } from '@/lib/db/schema'
+import { clearLogoReferences } from '@/lib/services/brand-service'
 
 /**
  * Asset storage.
@@ -170,6 +171,10 @@ export async function saveAsset(input: SaveAssetInput): Promise<Asset> {
   const fileName = `${digest}.${detected.extension}`
   const absolutePath = path.join(ASSETS_DIR, fileName)
 
+  // Don't rely on the database module having created this. It is idempotent,
+  // and it means an upload still works if the folder was removed by hand or
+  // lost in a partial restore.
+  await mkdir(ASSETS_DIR, { recursive: true })
   await writeFile(absolutePath, bytes)
 
   const row = getDb()
@@ -219,6 +224,8 @@ export async function deleteAsset(id: string): Promise<void> {
   const asset = getAsset(id)
   if (!asset) return
 
+  // A brand pointing at this asset would otherwise render a broken logo.
+  clearLogoReferences(id)
   db.delete(assets).where(eq(assets.id, id)).run()
 
   const stillUsed = db
