@@ -1,331 +1,257 @@
 # Architecture
 
-## 1. Principles
+## 1. What this is
+
+A **local, single-user application**. It runs on the streamer's own machine,
+stores everything in one folder, and talks to the outside world only to reach
+the streaming platforms it connects to.
+
+That constraint is the most important fact about this design. It removes
+authentication, multi-tenancy, row-level access rules, hosting and running
+costs — and it makes the live path *shorter*, because OBS is on the same
+machine as the server pushing events to it.
+
+## 2. Principles
 
 1. **Platform-agnostic core.** Twitch is the first provider, not the shape of
-   the system. Provider logic lives behind adapters; the rest of the app only
-   ever sees normalized internal events.
-2. **Brand DNA is the visual source of truth.** Connected platforms are the
+   the system. Provider logic sits behind adapters; the rest of the app only
+   sees normalized internal events.
+2. **Brand DNA is the visual source of truth.** The connected platform is the
    live-data source of truth. Neither leaks into the other.
-3. **Live paths are different from dashboard paths.** An OBS browser source and
-   an analytics page have opposite requirements. They get separate runtimes,
-   separate performance budgets and separate failure modes.
-4. **Structured generation, never arbitrary code execution.** AI produces and
-   edits validated JSON specifications. Controlled application code turns those
-   specifications into widgets or compositions.
-5. **Never fabricate data.** If a provider did not give us a number, the UI says
-   so.
+3. **Live paths differ from dashboard paths.** An OBS browser source and a
+   settings page have opposite requirements and get different budgets.
+4. **Structured generation, never arbitrary code execution.** AI produces
+   validated JSON; controlled code turns it into widgets or compositions.
+5. **Never fabricate data.** If a provider did not give us a number, say so.
 
 ---
 
-## 2. Deployment topology
+## 3. Topology
 
 ```
-                        ┌──────────────────────────────┐
-                        │            Vercel            │
-                        │  ┌────────────────────────┐  │
-   Creator ─────────────┼─▶│ Marketing (static)     │  │
-                        │  ├────────────────────────┤  │
-                        │  │ Dashboard / Brand      │  │
-                        │  │ Overlay Editor (SSR)   │  │
-                        │  ├────────────────────────┤  │
-   OBS Browser ─────────┼─▶│ /overlay/[token]       │  │
-   Source               │  │ (lean runtime)         │  │
-                        │  ├────────────────────────┤  │
-   Twitch EventSub ─────┼─▶│ /api/webhooks/twitch   │  │
-                        │  └───────────┬────────────┘  │
-                        └──────────────┼───────────────┘
-                                       │
-              ┌────────────────────────┼────────────────────────┐
-              ▼                        ▼                        ▼
-      ┌───────────────┐      ┌──────────────────┐     ┌──────────────────┐
-      │   Supabase    │      │  External APIs   │     │  Render Worker   │
-      │ Postgres+RLS  │      │  Twitch          │     │  HyperFrames     │
-      │ Auth          │      │  YouTube         │     │  + FFmpeg        │
-      │ Storage       │      │  OpenAI Images   │     │  (off-Vercel)    │
-      │ Realtime      │      └──────────────────┘     └──────────────────┘
-      └───────────────┘
+                    Your machine
+   ┌───────────────────────────────────────────────┐
+   │                                               │
+   │   Next.js (localhost:3000)                    │
+   │   ├── Dashboard, Brand Studio, Editor         │
+   │   ├── /overlay/{token}  ──────────┐           │
+   │   └── EventSub WebSocket client   │           │
+   │              │                    │ SSE       │
+   │              ▼                    ▼           │
+   │   ┌──────────────────┐     ┌──────────────┐   │
+   │   │  data/app.db     │     │ OBS Browser  │   │
+   │   │  data/assets/    │     │ Source       │   │
+   │   └──────────────────┘     └──────────────┘   │
+   │                                               │
+   └───────────────┬───────────────────────────────┘
+                   │ outbound only
+                   ▼
+         Twitch  ·  YouTube  ·  OpenAI
 ```
 
-Vercel hosts everything request-shaped. Long video rendering does **not** run in
-a serverless request — see §8.
+Nothing listens on a public port. Nothing is uploaded. The only inbound
+connection is OBS on the same machine.
 
 ---
 
-## 3. Request paths and their budgets
+## 4. Storage
 
-| Path | Runtime | Budget | Notes |
-| --- | --- | --- | --- |
-| `/` and marketing | Static | Prerendered | Reads no session; must stay static |
-| `/(auth)/*` | SSR | Fast | Proxy-matched for session refresh |
-| `/(app)/*` | SSR, `force-dynamic` | Per-creator | Never cached, never prerendered |
-| `/overlay/[token]` | Lean SSR + minimal JS | **Live** | No dashboard code, no session cookie |
-| `/api/webhooks/*` | Route handler | **Live** | Signature-verified, no session |
+**SQLite** via `better-sqlite3`, with `drizzle-orm` for typed queries.
 
-The overlay and webhook routes are deliberately excluded from the proxy matcher
-in `src/proxy.ts`. A browser source must never pay for a session refresh, and a
-provider webhook has no session to refresh.
+- One file, `data/app.db`. Back up by copying the folder.
+- **WAL journal mode**, so the overlay's reads never block on a write. Events
+  arrive while the browser source is reading; a stall there would be visible on
+  stream.
+- `foreign_keys = ON`, `busy_timeout = 5000`.
+- Migrations are hand-written SQL tracked by SQLite's own `user_version`. No
+  migration CLI — which also means no `drizzle-kit`, and no dependency
+  advisories from it. Append-only: never edit a shipped migration.
+- Migrations take the write lock with `BEGIN IMMEDIATE` and re-read
+  `user_version` inside it, because `next build` runs several workers that each
+  open the database.
+- The connection opens **lazily on first use**, not at module load, so a build
+  does not create a data directory as a side effect.
+
+### Schema
+
+```
+brands ───────────┐  Brand DNA as JSON: colors, typography,
+                  │  visual style, motion style, rules
+assets ───────────┤  Uploaded + generated files; bytes on disk,
+                  │  metadata and provenance in the database
+overlays ─────────┤  Canvas + settings + opaque public_token
+  └─ overlay_widgets
+alert_configs ────┤  Per event type: spec, template, duration, sound
+connected_accounts┤  One row per provider; tokens encrypted at rest
+stream_events ────┘  Normalized events, UNIQUE(provider, provider_event_id)
+```
+
+Two decisions worth stating:
+
+- `stream_events` has a **unique constraint on `(provider, provider_event_id)`**.
+  Twitch may deliver the same event twice; deduplication belongs in the
+  database, not in application memory that dies with the process.
+- `overlays.public_token` is separate from the row's `id`, so it can be rotated
+  without breaking anything that references the overlay.
 
 ---
 
-## 4. Authentication vs connected accounts
+## 5. The live path
 
-These are different concepts and the schema keeps them apart.
-
-- A **platform account** (`auth.users` → `profiles`) is who the creator is here.
-- A **connected account** (`connected_accounts`) is a channel they authorised us
-  to read: Twitch today, YouTube later, more after that.
-
-A creator can connect several channels, disconnect them, or connect none at all,
-without affecting their account. Social sign-in can be added later as a
-*convenience* on top of the platform account — never as a replacement for it.
-
-### The auth chain as implemented
+This is what has to work while someone is streaming.
 
 ```
-Request
-  └▶ src/proxy.ts
-       └▶ updateSession()  refresh cookies, getClaims() verifies the JWT
-       └▶ optimistic redirect (convenience only)
-  └▶ (app)/layout.tsx
-       └▶ requireUser()   ← the real authorisation check
-  └▶ Postgres
-       └▶ Row Level Security  ← the enforcement boundary
+Twitch EventSub (WebSocket)
+        ▼
+  Provider adapter          verify, dedupe, normalize
+        ▼
+  Normalized event          { type, provider, timestamp, actor, data, isTest }
+        ▼
+  EventService
+   ├─▶ stream_events        persisted
+   ├─▶ Activity feed
+   └─▶ Alert engine
+         ▼
+       Alert queue          sequence, don't overlap
+         ▼
+       SSE  ──────────────▶ /overlay/{token} in OBS
 ```
 
-Three layers, and only the last two are load-bearing. This matters: Next.js
-documentation is explicit that proxy/middleware is not a session-management or
-authorisation solution.
+### Why EventSub over WebSocket, not webhooks
+
+Webhook delivery needs a public HTTPS URL. A local app has none, and requiring
+a tunnel would make the whole thing fragile. Twitch's **WebSocket transport**
+exists for exactly this case: the app dials out to Twitch and receives events on
+that connection. No inbound port, no tunnel, no certificate.
+
+This is the single biggest benefit of going local, and it removed what was the
+largest risk in the earlier cloud design.
+
+### Why SSE for the overlay
+
+The overlay only ever *receives*. Server-Sent Events fit that exactly:
+
+- One-way, so no WebSocket handshake or protocol overhead.
+- `EventSource` reconnects automatically in the browser — no reconnect logic to
+  write, and a browser source that sat in OBS for a week recovers on its own.
+- Works in a plain Next.js route handler; no second server process.
+
+A browser source pays for none of the dashboard: no session, no shell, no editor
+bundle.
 
 ---
 
-## 5. Data model (Phase 2 target)
+## 6. Secrets
 
-UUID primary keys. Migrations under `supabase/migrations/`. RLS on every table.
-
-```
-profiles(id → auth.users, display_name, creator_type, created_at, …)
-  │
-  ├─ brands(id, user_id, name, description, audience, personality[],
-  │         colors jsonb, typography jsonb, visual_style jsonb,
-  │         motion_style jsonb, rules jsonb, is_default)
-  │
-  ├─ connected_accounts(id, user_id, provider, provider_user_id,
-  │                     provider_channel_id, display_name, username,
-  │                     avatar_url, scopes[], token_expires_at,
-  │                     metadata jsonb, connected_at, updated_at)
-  │        └─ tokens are NOT stored here in plaintext — see §7
-  │
-  ├─ assets(id, user_id, brand_id, type, source, storage_path, mime_type,
-  │         width, height, duration_ms, prompt, provider, approved,
-  │         favorite, created_at)
-  │
-  ├─ overlays(id, user_id, brand_id, name, canvas jsonb, settings jsonb,
-  │           public_token, token_rotated_at)
-  │        └─ overlay_widgets(id, overlay_id, type, config jsonb, z_index,
-  │                           x, y, width, height, locked)
-  │
-  ├─ alert_configs(id, user_id, brand_id, event_type, spec jsonb,
-  │                duration_ms, sound_asset_id, min_threshold, enabled)
-  │
-  └─ stream_events(id, user_id, provider, provider_event_id, type,
-                   actor jsonb, data jsonb, is_test, occurred_at,
-                   UNIQUE(provider, provider_event_id))
-```
-
-Later: `generations`, `renders`, `stream_sessions`, `channel_metrics`,
-`analytics_snapshots`, then the community, monetization and usage tables.
-
-Two schema decisions worth stating now:
-
-- `stream_events` carries a **unique constraint on `(provider,
-  provider_event_id)`**. Twitch explicitly may deliver a webhook more than once;
-  deduplication has to live in the database, not in application memory.
-- `overlays.public_token` is the opaque OBS identifier, separate from the row's
-  UUID, so it can be rotated without breaking anything else that references the
-  overlay.
-
----
-
-## 6. Event architecture
-
-```
-Twitch EventSub          YouTube (polling / PubSubHubbub)
-      │                            │
-      ▼                            ▼
-  ┌──────────────────────────────────────┐
-  │        Provider Adapter              │  verify signature, dedupe,
-  │  (TwitchService / YouTubeService)    │  map to internal shape
-  └───────────────────┬──────────────────┘
-                      ▼
-          Normalized internal event
-   { type, provider, creatorId, timestamp, actor, data, isTest }
-                      │
-                      ▼
-              ┌───────────────┐
-              │ EventService  │
-              └───┬───┬───┬───┘
-      ┌───────────┘   │   └────────────┐
-      ▼               ▼                ▼
- Activity Feed   Analytics       Alert Engine
-                                       │
-                                       ▼
-                            Realtime channel per overlay
-                                       │
-                                       ▼
-                             OBS browser source
-                                       │
-                                  Alert queue
-```
-
-A test event enters at "Normalized internal event" with `isTest: true` and
-travels the same path as a real one. That is the point: a creator who tests an
-alert exercises the real pipeline, not a mock of it.
-
----
-
-## 7. Secret handling
-
-| Secret | Where it lives | Reaches the browser? |
+| Secret | Where | Reaches the browser? |
 | --- | --- | --- |
-| Supabase publishable key | `NEXT_PUBLIC_*` | Yes — safe, RLS-guarded |
-| Supabase secret key | Server env | Never |
-| Twitch/YouTube OAuth tokens | Server-side, encrypted at rest | Never |
-| Twitch EventSub secret | Server env | Never |
-| OpenAI API key | Server env | Never |
-| Overlay public token | In the OBS URL | Yes — opaque, scoped, revocable |
+| Twitch OAuth tokens | `connected_accounts`, encrypted at rest | Never |
+| `TOKEN_ENCRYPTION_KEY` | Environment | Never |
+| OpenAI API key | Environment | Never |
+| Overlay public token | In the OBS URL | Yes — opaque, rotatable |
 
-Provider access and refresh tokens are held in a table the publishable key
-**cannot** reach (RLS denies all client access; only the secret-key client
-reads it) and are encrypted at rest. They are never logged, never returned from
-an API route, and never placed in a redirect URL.
+Provider tokens are encrypted before they touch the database, so a copied
+`app.db` is not usable on its own. They are never logged, never returned from a
+route handler, and never placed in an overlay URL.
+
+Server-only modules import `server-only`, which turns a mistaken client import
+into a build error. This is verified, not assumed — importing the database layer
+into a Client Component fails the build.
 
 ---
 
-## 8. Rendering architecture
+## 7. Rendering
 
 Two different things get called "animation", and conflating them would be the
 most expensive mistake available here.
 
-**Live widget animation** — follower, subscriber, raid, cheer, goal completion.
-Runs in the browser source from a template. No render job, no video file, no
-network round trip beyond the event itself. Latency budget: sub-second.
+**Live widget animation** — follower, subscriber, raid, cheer, goal. Runs in the
+browser source from a template. No render job, no video file. Sub-second.
 
-**Rendered asset** — animated logo, intro, BRB screen, transition, promo. Built
-with HyperFrames, rendered to MP4/WebM once, stored, reused.
+**Rendered asset** — animated logo, intro, BRB, transition, promo. Built with
+HyperFrames, rendered once to MP4/WebM, stored in `data/assets`, reused.
 
-```
-Vercel  ──▶ create render job (queued)
-                    │
-                    ▼
-              Job queue
-                    │
-                    ▼
-        Render worker (NOT Vercel)
-        HyperFrames + FFmpeg
-                    │
-                    ▼
-        Object storage ──▶ assets row ──▶ available everywhere
-```
-
-`RenderService` is an interface with a queue behind it, so the worker's host can
-be chosen later — and changed later — without touching application code. During
-local development the worker may simply run on the developer's machine.
-
-**Never send a live event through a render job.**
+Locally, rendering is a background job on the same machine — it does not block
+the UI, and it does not need a worker service. **Never send a live event through
+a render job.**
 
 ---
 
-## 9. Service boundaries
+## 8. Services
 
-Responsibilities, not microservices. All in-process until something proves it
-needs to move.
+Responsibilities, not microservices. All in-process.
 
 ```
-BrandService          ConnectedAccountService   ImageGenerationService
-AssetService          TwitchService             MotionGenerationService
-OverlayService        YouTubeService            RenderService
-AlertService          EventService              StorageService
-AnalyticsService      RealtimeService           UsageService
+BrandService     OverlayService    EventService      RenderService
+AssetService     AlertService      TwitchService     ImageGenerationService
+SetupService     AnalyticsService  YouTubeService    MotionGenerationService
 ```
 
-`UsageService` exists from early on even though billing does not. Image
-generation and video rendering cost real money; an architecture that cannot
-measure them cannot later constrain them.
+Deliberately thin. There is no repository pattern and no dependency injection —
+the storage layer is a local SQLite file that is not going to be swapped, and
+abstraction that exists only to allow a swap that will not happen is a cost with
+no return.
 
 ---
 
-## 10. Architecture review
-
-Verification that the design supports each required capability, and where it
-strains.
+## 9. Architecture review
 
 | Requirement | Supported | Notes |
 | --- | --- | --- |
-| Vercel deployment | ✅ | Everything except video rendering |
-| Supabase (PG/Auth/Storage/Realtime) | ✅ | RLS from Phase 2 |
-| Twitch OAuth | ✅ | Server-side code flow, state in an HTTP-only cookie |
-| Twitch events | ✅ | EventSub webhooks to a route handler |
-| OBS browser sources | ✅ | Dedicated lean route, opaque token |
-| Realtime to OBS | ✅ | Supabase Realtime behind `RealtimeService` |
-| Brand DNA | ✅ | `brands` table, JSONB, versionable |
-| HyperFrames | ⚠️ | Not installed here — see risk R1 |
-| OpenAI images | ✅ | Server-side only, behind `ImageGenerationService` |
-| Dedicated rendering later | ✅ | Queue + worker, provider-agnostic |
+| Runs locally, no account | ✅ | No auth layer at all |
+| Zero running cost | ✅ | Only OpenAI (Phase 9) ever costs money |
+| Persistent storage | ✅ | SQLite + files in `data/` |
+| Twitch OAuth | ✅ | Loopback redirect to localhost |
+| Twitch events | ✅ | EventSub **WebSocket** — no public URL needed |
+| OBS browser sources | ✅ | Lean route, opaque token, SSE |
+| Brand DNA | ✅ | JSON columns on `brands` |
+| HyperFrames | ⚠️ | Not installed — risk R1 |
+| OpenAI images | ✅ | Server-side, behind a service |
 | YouTube later | ✅ | Same adapter shape as Twitch |
 
 ### Risks
 
-**R1 — HyperFrames is not present in this environment.** *Blocking for Phase 8.*
-No HyperFrames skill is installed and no HyperFrames CLI is available. A public
-npm package named `hyperframes` (0.8.27, "HyperFrames CLI — create, preview and
-render HTML video compositions") matches the described workflow, but nothing in
-this repository or environment confirms it is the intended one. Phase 8 must not
-begin until the correct skill/CLI is installed and its own documentation is read
-as the source of truth. Everything in `docs/hyperframes.md` is a plan, not an
-implementation.
+**R1 — HyperFrames is not installed.** *Blocking for Phase 8.* No skill, no CLI.
+A public npm package `hyperframes` (0.8.27) matches the described workflow, but
+nothing here confirms it is the intended one. Phase 8 does not start until the
+correct tooling is installed and its own documentation read as the source of
+truth.
 
-**R2 — FFmpeg is not installed.** *Blocking for Phase 8 rendering.* Video
-rendering needs it. This reinforces §8: rendering belongs on a worker with a
-controlled image, not in the web runtime.
+**R2 — FFmpeg is not installed.** *Blocking for Phase 8 rendering.* Needs
+installing on whatever machine runs the app.
 
-**R3 — Vercel execution limits versus video rendering.** A render can exceed any
-serverless timeout. Mitigated by design: jobs are queued and the UI polls status.
-The worker host is still an open decision — deliberately deferred so it is not
-made before there is a real workload to size it against.
+**R3 — The app must be running for alerts to work.** If it is closed or crashes
+mid-stream, alerts stop. This is true of every local streaming tool, but it is a
+real operational property: start it before going live, and Phase 6 should make
+the overlay visibly indicate a lost connection rather than silently doing
+nothing.
 
-**R4 — Supabase Realtime under alert load.** Fine at the scale of one creator's
-overlay, unproven at a burst of thousands of concurrent browser sources. Mitigated
-by keeping realtime behind `RealtimeService` so the transport can be swapped
-without touching the widget runtime. Revisit before public launch, not before.
+**R4 — One machine, no redundancy.** The data folder is the only copy unless you
+back it up. Phase 2 should add an export, and the README should keep saying
+"copy the folder" until it does.
 
-**R5 — Twitch EventSub webhooks require a public HTTPS URL.** Local development
-cannot receive them directly; a tunnel or the WebSocket transport is needed for
-development. Phase 7 must decide this explicitly rather than discovering it.
+**R5 — Provider API drift.** Twitch and YouTube endpoints, scopes and event
+names change; `channel.follow` has changed its authorisation requirements
+before. Every provider phase begins by reading current official documentation.
+Nothing in these docs is verified API behaviour.
 
-**R6 — Provider API drift.** Twitch and YouTube endpoints, scopes and event
-names change; `channel.follow` in particular has changed its authorisation
-requirements before. Every provider phase starts by reading the current official
-documentation. Nothing in these docs should be treated as verified API behaviour.
+**R6 — Token encryption key management.** Encrypting tokens at rest only helps
+if the key is not sitting beside the database. Phase 4 must decide where it
+lives and what happens when it is lost — probably "reconnect the platform",
+which is an acceptable answer that needs to be an explicit one.
 
-**R7 — Provider data retention.** Storing analytics snapshots is necessary to
-show history without hammering APIs, but both Twitch and YouTube constrain what
-may be stored and for how long. Phase 4 and Phase 10 must check the developer
-terms before designing their snapshot tables.
+**R7 — Native module portability.** `better-sqlite3` compiles per platform and
+Node version. It installs from a prebuilt binary on common setups, but a Node
+upgrade can require `npm rebuild`. Worth knowing before it happens mid-stream.
 
-**R8 — Supabase legacy API keys are being retired.** The `anon` and
-`service_role` keys are scheduled for removal. The code prefers the new
-publishable/secret keys and falls back to the legacy names, so migration is a
-configuration change rather than a code change.
+**R8 — Next.js 16 is dynamic by default.** Pages are no longer implicitly
+cached, which suits an app whose data changes as you use it. Any future caching
+must be opted into deliberately.
 
-**R9 — Next.js 16 is dynamic by default.** Pages are no longer implicitly
-cached. Good for a per-creator dashboard, but it means any future caching must
-be opted into deliberately with `use cache`, and marketing pages must be kept
-free of session reads to stay static. `src/app/page.tsx` follows this rule and
-says so in a comment.
+### If this ever becomes multi-user
 
-### Deliberately deferred
-
-The render worker's host, the realtime transport at scale, the entitlements
-model, and the custom-widget sandbox. Each is behind an interface. None needs
-deciding before Phase 7, and deciding early would mean guessing.
+It would need auth, an owner column on every table, and access rules — a real
+project, not a config change. The schema does not prevent it (nothing assumes a
+single row anywhere), but nothing has been built to enable it either. That was a
+deliberate call: paying for that flexibility now, in code you read every day,
+buys nothing today.

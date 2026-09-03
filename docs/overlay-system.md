@@ -20,29 +20,34 @@ Labels, Media. MVP ships Alert Box, Image/logo and Text.
 ## The OBS browser source
 
 ```
-https://<app-origin>/overlay/{publicToken}
+http://localhost:3000/overlay/{publicToken}
 ```
 
 Rules for this route, which override editor convenience every time:
 
 - Transparent background, no dashboard chrome, no application shell.
 - Minimal JavaScript. Nothing from the editor bundle reaches it.
-- Realtime connection with automatic reconnect and backoff.
-- Recovers gracefully after a disconnect — a browser source may sit untouched in
-  OBS for weeks.
-- Excluded from the proxy matcher: no session cookie, no session refresh.
+- **Server-Sent Events**, not WebSockets. The overlay only ever receives, and
+  the browser's `EventSource` reconnects on its own — a browser source that sat
+  in OBS for a week recovers without any reconnect logic of ours.
+- Same machine as the server, so the event path is localhost to localhost.
 
 A beautiful editor is worthless if the resulting overlay stutters on stream.
 
 ## Security
 
-- `publicToken` is opaque and unrelated to the overlay's UUID or the creator's
-  ID. It is not sequential and not guessable.
-- Rotatable from the UI. If a creator leaks a URL on stream, they revoke it and
-  paste a new one.
-- Read/realtime scope only. A browser source can never write data.
-- No OAuth token, no service credential and no account identifier appears in the
-  URL — these URLs live in OBS configuration files for months.
+- `publicToken` is 128 bits of randomness, unrelated to the overlay's row ID.
+  Not sequential, not guessable.
+- Rotatable from the UI. If you show the URL on stream by accident, rotate it
+  and paste the new one — nothing else breaks.
+- Read-only. A browser source can never write data.
+- No provider token and no credential appears in the URL — these live in OBS
+  configuration files for months.
+
+The app binds to localhost, so the overlay is not reachable from outside the
+machine in the first place. The token still matters: it keeps overlays distinct
+from one another, and it stays correct if you ever expose the app on a LAN to
+drive a second machine's OBS.
 
 ## Editor (Phase 5–6)
 

@@ -1,15 +1,13 @@
 # Willelements
 
-**An AI-native operating system for streamers and creators.**
+**A local, AI-native streaming toolkit — overlays, alerts, brand and analytics, running on your own machine.**
 
-> Build your brand. Power your stream. Grow your community.
->
-> Your entire stream, built around your brand.
+> Build your brand. Power your stream.
 
-Willelements combines live-stream management, OBS overlays, branded alerts,
-creator analytics and AI-assisted creation into one platform. The creator's
-**Brand DNA** is the visual source of truth; their **connected platforms** are
-the live-data source of truth.
+Willelements runs entirely on your computer. No account, no server, no
+subscription. Your Brand DNA is the visual source of truth; your connected
+streaming platform is the live-data source of truth. Everything is stored in a
+single folder you own.
 
 ---
 
@@ -17,71 +15,42 @@ the live-data source of truth.
 
 **Phase 1 — Foundation. Complete and validated.**
 
-What works today:
+Working today:
 
-- Next.js 16 App Router + TypeScript + Tailwind v4 UI foundation
-- Supabase email/password authentication (sign up, confirm, sign in, sign out)
-- Session refresh in `src/proxy.ts`, with signature-verified access tokens
-- Protected application shell with the full product navigation
-- Dashboard, account settings and security pages
-- Public marketing landing page
+- Next.js 16 App Router + TypeScript + Tailwind v4
+- Local SQLite database, created and migrated automatically on first run
+- Full schema: brands, assets, overlays, widgets, alert configs, connected
+  accounts, stream events
+- Application shell with the full product navigation
+- Dashboard with a live setup checklist read from the database
+- Storage settings showing exactly where your data lives
 
-What does **not** work yet — and is not pretended to:
+Not working yet — and not pretended to:
 
-- No Twitch or YouTube connection (Phase 4 / Phase 10)
+- No Twitch connection (Phase 4)
 - No overlays or OBS browser sources (Phase 5)
 - No alerts (Phase 6), no live events (Phase 7)
-- No AI generation (Phase 8 / Phase 9)
-- No database tables beyond Supabase's own `auth` schema (Phase 2)
+- No AI generation (Phase 8 / 9)
 
-The dashboard renders **empty states rather than sample metrics**. Displaying a
-number we did not receive from a provider is treated as a product bug.
-
-See [`ROADMAP.md`](./ROADMAP.md) for the phase plan and
-[`ARCHITECTURE.md`](./ARCHITECTURE.md) for how the system fits together.
+The dashboard shows **empty states rather than sample metrics**. Displaying a
+number no provider actually gave us is treated as a bug.
 
 ---
 
 ## Getting started
 
-### Requirements
-
-- Node.js **20.9+** (Next.js 16 requirement; developed on 22.x)
-- npm 10+
-- A Supabase project (free tier is fine)
-
-### Setup
+Requires **Node.js 20.9+** (developed on 22.x). Nothing else.
 
 ```bash
 npm install
-cp .env.example .env.local
-```
-
-Fill in `.env.local` from your Supabase project (**Project Settings → API keys**):
-
-| Variable | Where to find it |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key (`sb_publishable_…`) |
-
-Then:
-
-```bash
 npm run dev      # http://localhost:3000
 ```
 
-Without those two variables the app still runs — it renders a setup notice on
-the auth screens instead of crashing.
+That's it. No `.env` file needed, no account to create, no service to sign up
+for. The database is created on first page load.
 
-### Supabase project configuration
-
-In **Authentication → URL Configuration**, add the callback URL so email
-confirmation links work:
-
-- Site URL: `http://localhost:3000`
-- Redirect URLs: `http://localhost:3000/auth/callback`
-
-Add your production origin alongside these when you deploy.
+Copy `.env.example` to `.env.local` only when you reach a phase that needs a
+provider key — none are required to run the app.
 
 ### Scripts
 
@@ -96,49 +65,61 @@ Add your production origin alongside these when you deploy.
 
 ---
 
+## Your data
+
+Everything lives in one directory:
+
+```
+data/
+├── app.db          SQLite database
+└── assets/         Uploaded and generated files
+```
+
+- **Back up** by copying that folder.
+- **Move machines** by copying that folder.
+- **Start over** by deleting it — it is recreated on next run.
+- It is gitignored. It is yours, not the project's.
+
+Point `WILLELEMENTS_DATA_DIR` somewhere else if you'd rather keep it outside
+the repo.
+
+---
+
+## What it costs
+
+Nothing, for everything through Phase 7 — a working branded follower alert in
+OBS driven by real Twitch events.
+
+| | Cost |
+| --- | --- |
+| SQLite, local files | Free |
+| Twitch API + EventSub | Free |
+| OBS | Free |
+| Running the app | Free |
+| OpenAI image generation (Phase 9) | Pay per image — optional, and far away |
+
+---
+
 ## Project layout
 
 ```
 src/
 ├── app/
-│   ├── (auth)/            Sign in, sign up, confirm — public
-│   ├── (app)/             Protected shell: dashboard, settings
-│   ├── auth/callback/     OAuth / email confirmation code exchange
+│   ├── (app)/             Dashboard, settings — the application shell
 │   ├── layout.tsx         Root layout, fonts, metadata
-│   └── page.tsx           Marketing landing (static)
+│   └── page.tsx           Redirects to the dashboard
 ├── components/
 │   ├── shell/             Sidebar, topbar, page header
 │   └── ui/                Button, field, panel, icons
 ├── config/navigation.ts   Product information architecture
-├── lib/
-│   ├── auth/dal.ts        Data access layer — the real authorisation check
-│   ├── supabase/          Browser, server, admin clients + session refresh
-│   ├── env.ts             Validated environment configuration
-│   └── utils.ts
-└── proxy.ts               Session refresh + optimistic redirects
+└── lib/
+    ├── db/                SQLite connection, schema, migrations
+    ├── services/          Brand, setup — feature logic lives here
+    ├── env.ts             Optional configuration
+    └── utils.ts
 ```
 
-Directories that arrive in later phases — `src/services/`, `src/app/overlay/`,
-`supabase/migrations/` — are described in `ARCHITECTURE.md`.
-
----
-
-## Security posture
-
-Non-negotiables, enforced from Phase 1 onward:
-
-- No secret ever reaches the browser. Server-only modules import `server-only`
-  so a mistaken client import fails the build.
-- Authorisation is decided server-side in the data access layer and by Postgres
-  Row Level Security — never by the proxy redirect alone.
-- Access tokens are validated by signature (`getClaims()`), never trusted
-  straight from cookie storage.
-- Auth responses are sent `Cache-Control: no-store` so no CDN can serve one
-  creator's session to another.
-- OBS browser-source URLs will carry opaque, revocable tokens — never user IDs,
-  never OAuth tokens.
-
-See [`docs/deployment.md`](./docs/deployment.md) for the full variable list.
+Later phases add `src/app/overlay/` (the OBS browser sources) and more services.
 
 ---
 
@@ -146,8 +127,9 @@ See [`docs/deployment.md`](./docs/deployment.md) for the full variable list.
 
 | Document | Contents |
 | --- | --- |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System design, service boundaries, architecture review |
+| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System design and architecture review |
 | [`ROADMAP.md`](./ROADMAP.md) | Phases 1–10 with an implementation checklist |
+| [`docs/local-setup.md`](./docs/local-setup.md) | Running it, backing it up, OBS |
 | [`docs/brand-dna.md`](./docs/brand-dna.md) | The creator identity model |
 | [`docs/overlay-system.md`](./docs/overlay-system.md) | Overlays, widgets, the OBS runtime |
 | [`docs/event-system.md`](./docs/event-system.md) | Normalized events and the alert queue |
@@ -155,4 +137,3 @@ See [`docs/deployment.md`](./docs/deployment.md) for the full variable list.
 | [`docs/youtube-integration.md`](./docs/youtube-integration.md) | YouTube/Google plan |
 | [`docs/hyperframes.md`](./docs/hyperframes.md) | Motion generation and rendering |
 | [`docs/ai-generation.md`](./docs/ai-generation.md) | Image generation and structured specs |
-| [`docs/deployment.md`](./docs/deployment.md) | Vercel, Supabase, environment variables |

@@ -29,7 +29,7 @@ Provider ──▶ Adapter ──▶ Normalized event ──▶ EventService
                                                   ├─▶ Activity Feed
                                                   ├─▶ Analytics
                                                   ├─▶ Alert Engine
-                                                  └─▶ Realtime → OBS
+                                                  └─▶ SSE → OBS
 ```
 
 The adapter is the only code that knows a provider's vocabulary. Everything
@@ -43,9 +43,12 @@ Streamers depend on this while live, so:
 - **Idempotency.** A unique constraint on `(provider, provider_event_id)`.
   Providers may deliver the same event more than once; the database rejects the
   duplicate rather than the application trying to remember.
-- **Signature verification.** Every webhook is verified before it is trusted.
-  An unverified request is discarded, not processed.
-- **Reconnect.** Realtime subscribers reconnect with backoff.
+- **Authenticated transport.** Events arrive over the app's own authenticated
+  EventSub WebSocket, not an open HTTP endpoint, so there is no unauthenticated
+  request to forge.
+- **Reconnect.** The EventSub client reconnects with backoff and honours
+  Twitch's reconnect messages; the overlay's `EventSource` reconnects on its
+  own.
 - **Queueing.** Alerts sequence rather than overlap.
 - **Graceful degradation.** A provider outage stops new events. It must not take
   down the overlay, the dashboard, or the alerts already queued.

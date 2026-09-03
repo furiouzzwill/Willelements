@@ -4,8 +4,9 @@ import { PageHeader } from '@/components/shell/page-header'
 import { EmptyState, Panel, PanelHeader } from '@/components/ui/panel'
 import { ButtonLink } from '@/components/ui/button'
 import { Icon } from '@/components/ui/icon'
-import { displayNameFor, requireUser } from '@/lib/auth/dal'
 import { CURRENT_PHASE, navigation } from '@/config/navigation'
+import { getDefaultBrand } from '@/lib/services/brand-service'
+import { getSetupState } from '@/lib/services/setup-service'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -16,55 +17,75 @@ function greeting(date: Date): string {
   return 'Good evening'
 }
 
+function SetupRow({ done, label, phase }: { done: boolean; label: string; phase: number }) {
+  return (
+    <li className="flex items-center justify-between gap-3 border-b border-line px-5 py-3 last:border-b-0">
+      <span className="flex items-center gap-2.5">
+        <span
+          aria-hidden="true"
+          className={
+            done
+              ? 'grid size-4 place-items-center rounded-full bg-positive/20 text-positive'
+              : 'size-4 rounded-full border border-line-strong'
+          }
+        >
+          {done ? '✓' : null}
+        </span>
+        <span className={done ? 'text-sm text-ink' : 'text-sm text-ink-muted'}>{label}</span>
+      </span>
+      <span className="text-xs text-ink-subtle">
+        {done ? 'Done' : `Phase ${phase}`}
+      </span>
+    </li>
+  )
+}
+
 /**
  * The command center.
  *
- * Every panel here is deliberately empty until the phase that supplies its data
- * ships. Live status, audience and stream history come from connected providers
- * (Phases 4 and 7) — the product rule is that we never display a metric we did
- * not actually receive from a provider.
+ * Panels stay empty until the phase that supplies their data ships. Live status
+ * and audience come from a connected platform (Phase 4 and 7) — the rule is
+ * that we never show a number no provider actually gave us.
  */
-export default async function DashboardPage() {
-  const user = await requireUser()
-  const name = displayNameFor(user)
+export default function DashboardPage() {
+  const brand = getDefaultBrand()
+  const setup = getSetupState()
 
+  // The next destinations to unlock, whichever phases they happen to fall in.
   const upcoming = navigation
     .flatMap((section) => section.items)
-    .filter((item) => item.phase === CURRENT_PHASE + 1 || item.phase === CURRENT_PHASE + 2)
+    .filter((item) => item.phase > CURRENT_PHASE)
+    .sort((a, b) => a.phase - b.phase)
     .slice(0, 4)
 
   return (
     <>
       <PageHeader
-        title={`${greeting(new Date())}, ${name}`}
-        description="Your workspace is set up. Connect a platform to start seeing live data."
+        title={`${greeting(new Date())}${brand ? `, ${brand.name}` : ''}`}
+        description={
+          setup.hasBrand
+            ? 'Connect a platform to start seeing live data.'
+            : 'Everything runs on this machine. Start by setting up your brand.'
+        }
       />
+
+      <Panel>
+        <PanelHeader title="Setup" description="What's ready and what's next" />
+        <ul>
+          <SetupRow done={setup.databaseReady} label="Local database created" phase={2} />
+          <SetupRow done={setup.hasBrand} label="Brand DNA saved" phase={3} />
+          <SetupRow done={setup.hasConnectedAccount} label="Twitch connected" phase={4} />
+          <SetupRow done={setup.hasOverlay} label="Overlay created" phase={5} />
+          <SetupRow done={setup.hasAlertConfig} label="Follower alert configured" phase={6} />
+        </ul>
+      </Panel>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel>
-          <PanelHeader
-            title="Live status"
-            description="Twitch and YouTube connections"
-          />
+          <PanelHeader title="Live status" description="Your connected platform" />
           <EmptyState
-            title="No platforms connected"
+            title="No platform connected"
             description="Twitch connection arrives in Phase 4. Until then there is no live status to report — and we will not guess one."
-          />
-        </Panel>
-
-        <Panel>
-          <PanelHeader title="Audience" description="Across connected platforms" />
-          <EmptyState
-            title="Nothing to measure yet"
-            description="Audience figures come straight from provider APIs once a channel is connected."
-          />
-        </Panel>
-
-        <Panel>
-          <PanelHeader title="Last stream" description="Duration, viewers, growth" />
-          <EmptyState
-            title="No stream history"
-            description="Stream sessions are recorded from provider events starting in Phase 7."
           />
         </Panel>
 
@@ -72,7 +93,7 @@ export default async function DashboardPage() {
           <PanelHeader title="Recent activity" description="Follows, subs, raids, cheers" />
           <EmptyState
             title="No events yet"
-            description="The activity feed fills in once real provider events are flowing."
+            description="Events land here once Twitch is connected and streaming to this machine."
           />
         </Panel>
       </div>
@@ -80,13 +101,12 @@ export default async function DashboardPage() {
       <Panel>
         <PanelHeader
           title="What's next"
-          description={`You are on Phase ${CURRENT_PHASE} — the application foundation`}
+          description={`Phase ${CURRENT_PHASE} is done — local storage is working`}
         />
         <div className="space-y-4 px-5 py-5">
           <p className="text-sm text-ink-muted">
-            Accounts, the protected shell and navigation are working. The next phases add
-            the data model, then Brand DNA, then the Twitch connection that makes this
-            dashboard come alive.
+            The app, its database and its files all live in this project folder. Nothing
+            is sent anywhere, and nothing costs money to run.
           </p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {upcoming.map((item) => (
@@ -101,7 +121,7 @@ export default async function DashboardPage() {
           </ul>
           <ButtonLink href="/settings" variant="secondary" size="sm">
             <Icon name="settings" />
-            Review account settings
+            View storage settings
           </ButtonLink>
         </div>
       </Panel>

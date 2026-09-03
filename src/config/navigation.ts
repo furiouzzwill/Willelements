@@ -31,7 +31,6 @@ export type IconName =
   | 'analytics'
   | 'activity'
   | 'community'
-  | 'monetization'
   | 'integrations'
   | 'settings'
 
@@ -112,18 +111,7 @@ export const navigation: NavSection[] = [
       { label: 'Chatbot', href: '/community/chatbot', phase: 11 },
       { label: 'Commands', href: '/community/commands', phase: 11 },
       { label: 'Timers', href: '/community/timers', phase: 11 },
-      { label: 'Moderation', href: '/community/moderation', phase: 11 },
       { label: 'Giveaways', href: '/community/giveaways', phase: 11 },
-      { label: 'Loyalty', href: '/community/loyalty', phase: 11 },
-    ],
-  },
-  {
-    label: 'Monetization',
-    icon: 'monetization',
-    items: [
-      { label: 'Tips', href: '/monetization/tips', phase: 12 },
-      { label: 'Goals', href: '/monetization/goals', phase: 12 },
-      { label: 'Sponsors', href: '/monetization/sponsors', phase: 12 },
     ],
   },
   {
@@ -139,11 +127,9 @@ export const navigation: NavSection[] = [
     label: 'Settings',
     icon: 'settings',
     items: [
-      { label: 'Account', href: '/settings', phase: 1 },
+      { label: 'Storage', href: '/settings', phase: 1 },
       { label: 'Connected Accounts', href: '/settings/connections', phase: 4 },
-      { label: 'Security', href: '/settings/security', phase: 1 },
       { label: 'Notifications', href: '/settings/notifications', phase: 6 },
-      { label: 'Billing', href: '/settings/billing', phase: 12 },
     ],
   },
 ]

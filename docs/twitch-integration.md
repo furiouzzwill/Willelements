@@ -22,53 +22,66 @@ counts, channel statistics, recent stream information.
 
 ## OAuth
 
-Authorisation code flow, entirely server-side.
+Authorisation code flow, handled entirely by the local server.
 
-- `state` generated per attempt, stored in an HTTP-only cookie, compared on
-  return. A mismatch aborts the flow.
-- Tokens exchanged server-side. The client never sees the code or the tokens.
-- Access and refresh tokens encrypted at rest, in a table the publishable key
-  cannot reach.
-- Refresh handled server-side, ahead of expiry.
-- **Request the minimum scopes.** Each additional scope needs a reason a creator
-  would accept if asked.
+- Redirect URL is a loopback address: `http://localhost:3000/api/twitch/callback`.
+  Twitch permits localhost redirects, which is what makes this work without any
+  public hosting.
+- `state` generated per attempt, stored server-side, compared on return. A
+  mismatch aborts the flow.
+- Tokens exchanged server-side. The browser never sees the code or the tokens.
+- Access and refresh tokens **encrypted before they are written** to
+  `connected_accounts`, so a copied `app.db` is not usable on its own.
+- Refresh handled ahead of expiry.
+- **Request the minimum scopes.** Following alerts need
+  `moderator:read:followers`; confirm the current requirement rather than
+  assuming this one.
 
 Never log a token. Never put one in a redirect URL, an error message, or an OBS
 browser-source URL.
 
-## EventSub
+## EventSub — WebSocket transport
 
-Twitch supports three transports — **webhook**, **WebSocket** and **conduits**.
-Subscriptions are transport-agnostic. The plan is webhooks in production, since
-this is a serverless deployment with no long-lived process.
+Twitch supports three transports: **webhook**, **WebSocket** and **conduits**.
+Subscriptions are transport-agnostic, so the choice is purely operational.
+
+**This app uses the WebSocket transport**, and that is the right call for a
+local application. Webhooks need a public HTTPS URL that a machine on a home
+network does not have; using them would mean running a tunnel and depending on
+it while live. With WebSocket the app dials out to Twitch and receives events on
+that connection — no inbound port, no tunnel, no certificate.
 
 Confirm at implementation time, from the official docs:
 
-- [ ] Current webhook signature header names and the exact signing algorithm
-- [ ] Challenge verification handshake for new subscriptions
-- [ ] Revocation notification handling
-- [ ] Retry and duplicate-delivery behaviour
-- [ ] Subscription limits and cost accounting
+- [ ] Current WebSocket endpoint URL
+- [ ] The welcome / keepalive / reconnect / revocation message types
+- [ ] How session IDs are issued and attached to subscriptions
+- [ ] Keepalive timeout, and how long a reconnect URL stays valid
+- [ ] Subscription limits per session
 - [ ] The current version and authorisation requirement of each subscription type
 
-### Webhook route requirements
+### Client requirements
 
-- Public HTTPS endpoint (`/api/webhooks/twitch`), excluded from the proxy matcher.
-- Verify the signature **before** parsing or acting on the body.
-- Respond quickly; do the work after acknowledging.
-- Deduplicate on the message/event ID.
-- Handle challenge and revocation message types, not just notifications.
+- Connect, read the welcome message, and use its session ID when creating
+  subscriptions via the Helix API.
+- Respond to **reconnect** messages by connecting to the supplied URL before
+  dropping the old socket, so no events are missed in the gap.
+- Treat a missed keepalive as a dead connection and reconnect with backoff.
+- Handle **revocation** — a subscription can be revoked when authorisation is
+  withdrawn or the app's permissions change.
+- Deduplicate on the message ID. Twitch may redeliver; the unique constraint on
+  `stream_events` is the backstop.
 
-### Local development (risk R5)
+### Reconnect behaviour matters more than it looks
 
-Local machines have no public HTTPS URL, so webhooks cannot arrive directly.
-Phase 7 must pick one deliberately: a tunnel to the local server, or the
-WebSocket transport for development only. Decide it at the start of the phase,
-not when it blocks.
+This connection is the difference between alerts working and not working during
+a stream. It has to survive a laptop sleeping, a router blip and a Twitch-side
+reconnect instruction, and it has to be visible in the UI when it is down — a
+silently dead socket looks identical to a quiet stream.
 
-## Data retention (risk R7)
+## Data retention
 
-Check the Twitch developer terms before storing provider-derived data
-indefinitely. Snapshots are needed to show history without hammering the API,
-but what may be retained, and for how long, is set by their terms — not by our
-convenience.
+Everything is stored locally, on the streamer's own machine, about their own
+channel — which is a materially different position from a service warehousing
+other people's data. Still worth reading the Twitch developer terms before
+building long-term analytics snapshots in Phase 7.

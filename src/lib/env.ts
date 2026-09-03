@@ -1,82 +1,47 @@
-import { z } from 'zod'
-
 /**
  * Environment configuration.
  *
- * Two rules that must hold for the life of this project:
+ * This app runs locally on one machine, for one person. There is no hosted
+ * backend and no account, so nothing here is required to start it — you can
+ * `npm run dev` with an empty environment and the app works. Keys are only
+ * needed as you reach the phase that uses them.
  *
- *  1. Anything reachable from the browser lives in `publicEnv` and is prefixed
- *     `NEXT_PUBLIC_`. Everything else is server-only and must never be imported
- *     from a Client Component.
- *  2. Server secrets are read lazily (`serverEnv()`), never at module scope, so
- *     that a missing Twitch/OpenAI key does not break the whole app before those
- *     phases ship.
- *
- * Supabase is migrating from the legacy `anon` / `service_role` keys to
- * `sb_publishable_…` / `sb_secret_…`. We prefer the new names and fall back to
- * the legacy ones so existing projects keep working.
- * See docs/deployment.md for the full variable list.
+ * Two rules still hold, and always will:
+ *  1. Anything reachable from the browser is prefixed `NEXT_PUBLIC_`.
+ *  2. Provider secrets are read on the server, lazily, and never logged.
  */
 
-const publicSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
-})
-
-/**
- * Next.js inlines `process.env.NEXT_PUBLIC_*` only for statically analysable
- * member expressions, so these have to be written out longhand.
- */
-const rawPublicEnv = {
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-}
-
-export type PublicEnv = z.infer<typeof publicSchema>
-
-let cachedPublicEnv: PublicEnv | null = null
-
-/**
- * Throws with an actionable message when Supabase is not configured. Call this
- * from anywhere that genuinely needs Supabase; use `isSupabaseConfigured()`
- * when you want to degrade gracefully instead.
- */
-export function publicEnv(): PublicEnv {
-  if (cachedPublicEnv) return cachedPublicEnv
-
-  const parsed = publicSchema.safeParse(rawPublicEnv)
-  if (!parsed.success) {
-    const missing = parsed.error.issues.map((issue) => issue.path.join('.')).join(', ')
-    throw new Error(
-      `Supabase is not configured. Missing or invalid environment variables: ${missing}. ` +
-        `Copy .env.example to .env.local and fill in your project values.`,
-    )
-  }
-
-  cachedPublicEnv = parsed.data
-  return cachedPublicEnv
-}
-
-export function isSupabaseConfigured(): boolean {
-  return publicSchema.safeParse(rawPublicEnv).success
+/** Where the database and asset files live. Copy this directory to back up. */
+export function dataDir(): string | undefined {
+  return process.env.WILLELEMENTS_DATA_DIR
 }
 
 /**
- * Absolute origin of this deployment, used to build OAuth redirect URLs and
- * OBS browser-source URLs. Vercel sets `VERCEL_PROJECT_PRODUCTION_URL` on all
- * environments of a project, which is a stable alias for the production
- * deployment.
+ * The origin OBS should use for browser sources, and that providers redirect
+ * back to during OAuth. Defaults to the local dev server.
  */
 export function siteUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_SITE_URL
-  if (explicit) return explicit.replace(/\/$/, '')
+  return (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+}
 
-  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  if (vercel) return `https://${vercel}`
+/** Twitch OAuth credentials — needed from Phase 4. */
+export function twitchCredentials(): { clientId: string; clientSecret: string } | null {
+  const clientId = process.env.TWITCH_CLIENT_ID
+  const clientSecret = process.env.TWITCH_CLIENT_SECRET
+  if (!clientId || !clientSecret) return null
+  return { clientId, clientSecret }
+}
 
-  return 'http://localhost:3000'
+export function isTwitchConfigured(): boolean {
+  return twitchCredentials() !== null
+}
+
+/**
+ * Key used to encrypt provider tokens at rest in the local database.
+ *
+ * Generated on first run and stored in the data directory rather than in the
+ * repository, so a copied database is not readable without it.
+ */
+export function tokenEncryptionKey(): string | undefined {
+  return process.env.TOKEN_ENCRYPTION_KEY
 }

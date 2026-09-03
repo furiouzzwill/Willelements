@@ -1,32 +1,26 @@
 import { MobileNav } from '@/components/shell/mobile-nav'
-import { Button } from '@/components/ui/button'
 import { Icon } from '@/components/ui/icon'
-import { signOut } from '@/app/(auth)/actions'
 
-export function Topbar({ email, displayName }: { email: string; displayName: string }) {
+/**
+ * The top bar of the application shell.
+ *
+ * There is no account menu because there is no account — this runs on one
+ * machine for one person. What sits here instead is the thing that actually
+ * matters during a stream: whether the app is connected to a platform.
+ */
+export function Topbar({ brandName }: { brandName: string | null }) {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-line px-4 sm:px-6">
       <div className="flex items-center gap-3">
         <MobileNav />
+        {brandName ? (
+          <span className="font-display text-sm font-medium text-ink">{brandName}</span>
+        ) : null}
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="hidden text-right sm:block">
-          <p className="text-sm font-medium text-ink">{displayName}</p>
-          <p className="text-xs text-ink-subtle">{email}</p>
-        </div>
-        <div
-          aria-hidden="true"
-          className="grid size-9 place-items-center rounded-full bg-accent-soft font-display text-sm font-semibold text-ink"
-        >
-          {displayName.charAt(0).toUpperCase()}
-        </div>
-        <form action={signOut}>
-          <Button type="submit" variant="ghost" size="sm" aria-label="Sign out">
-            <Icon name="logout" />
-            <span className="hidden sm:inline">Sign out</span>
-          </Button>
-        </form>
+      <div className="flex items-center gap-2 text-sm text-ink-subtle">
+        <Icon name="integrations" className="size-4" />
+        <span>No platform connected</span>
       </div>
     </header>
   )

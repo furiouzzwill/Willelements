@@ -56,19 +56,21 @@ commands.
 Always define the visual identity from Brand DNA before generating a
 composition.
 
-## Rendering infrastructure
+## Rendering
 
-Video rendering does not belong in a Vercel serverless request.
+Rendering runs as a background job on this machine — which is one of the
+simplifications that comes free with being a local app. There is no queue
+service to run and no worker to host.
 
 ```
-Vercel ─▶ create render job ─▶ queue ─▶ render worker ─▶ storage ─▶ asset
-                                    (HyperFrames + FFmpeg)
+Create render job ─▶ background job ─▶ data/assets ─▶ assets row
+                     (HyperFrames + FFmpeg)
 ```
 
 Job states: `queued`, `processing`, `completed`, `failed`, `cancelled`.
-Metadata: render ID, user, brand, project, type, status, progress, output asset,
-error code, and the created/started/completed timestamps.
+Metadata: render ID, brand, type, status, progress, output asset, error code,
+and the created/started/completed timestamps.
 
-The UI never blocks on a render. `RenderService` stays provider-agnostic so the
-worker's host can be chosen — and changed — later. During local development,
-rendering may simply run on the developer's machine.
+The UI never blocks on a render — you start one and keep working. A render is
+CPU-heavy, so Phase 8 should avoid starting one while a stream is live, or at
+least warn before doing so.

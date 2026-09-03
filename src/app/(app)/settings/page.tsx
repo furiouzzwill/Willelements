@@ -1,51 +1,69 @@
 import type { Metadata } from 'next'
+import path from 'node:path'
 
 import { PageHeader } from '@/components/shell/page-header'
 import { Panel, PanelHeader } from '@/components/ui/panel'
-import { displayNameFor, requireUser } from '@/lib/auth/dal'
+import { DATA_DIR } from '@/lib/db'
+import { LATEST_VERSION } from '@/lib/db/migrations'
+import { siteUrl } from '@/lib/env'
+import { getStorageStats } from '@/lib/services/setup-service'
 
-export const metadata: Metadata = { title: 'Account settings' }
+export const metadata: Metadata = { title: 'Settings' }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-5 py-3.5 last:border-b-0">
       <span className="text-sm text-ink-muted">{label}</span>
-      <span className="font-mono text-sm text-ink">{value}</span>
+      <span className="font-mono text-xs break-all text-ink">{value}</span>
     </div>
   )
 }
 
-export default async function SettingsPage() {
-  const user = await requireUser()
+export default function SettingsPage() {
+  const stats = getStorageStats()
 
   return (
     <>
       <PageHeader
-        title="Account"
-        description="Your platform account. Connected channels are managed separately under Integrations."
+        title="Settings"
+        description="This app runs entirely on this machine. Nothing is uploaded anywhere."
       />
 
       <Panel>
-        <PanelHeader title="Profile" />
+        <PanelHeader
+          title="Storage"
+          description="Back up by copying this one folder"
+        />
         <div>
-          <Row label="Creator name" value={displayNameFor(user)} />
-          <Row label="Email" value={user.email ?? '—'} />
-          <Row
-            label="Member since"
-            value={new Date(user.created_at).toISOString().slice(0, 10)}
-          />
+          <Row label="Data directory" value={DATA_DIR} />
+          <Row label="Database" value={path.join(DATA_DIR, 'app.db')} />
+          <Row label="Assets" value={path.join(DATA_DIR, 'assets')} />
+          <Row label="Schema version" value={String(LATEST_VERSION)} />
+          <Row label="Database size" value={stats.databaseSize} />
         </div>
       </Panel>
 
       <Panel>
-        <PanelHeader
-          title="Editing"
-          description="Profile editing lands with the profiles table in Phase 2"
-        />
-        <p className="px-5 py-5 text-sm text-ink-muted">
-          Right now your creator name lives in Supabase auth metadata. Phase 2 introduces
-          the <code className="font-mono text-xs text-ink">profiles</code> table with Row
-          Level Security, which is where editable profile and brand data will live.
+        <PanelHeader title="Contents" />
+        <div>
+          <Row label="Brands" value={String(stats.brands)} />
+          <Row label="Assets" value={String(stats.assets)} />
+          <Row label="Overlays" value={String(stats.overlays)} />
+          <Row label="Alert configs" value={String(stats.alertConfigs)} />
+          <Row label="Stream events" value={String(stats.streamEvents)} />
+        </div>
+      </Panel>
+
+      <Panel>
+        <PanelHeader title="Application" />
+        <div>
+          <Row label="App URL" value={siteUrl()} />
+          <Row label="Overlay URLs" value={`${siteUrl()}/overlay/{token}`} />
+        </div>
+        <p className="border-t border-line px-5 py-4 text-sm text-ink-muted">
+          Overlay browser sources become available in Phase 5. They use opaque, rotatable
+          tokens so a URL left visible on stream can be revoked without disturbing
+          anything else.
         </p>
       </Panel>
     </>
