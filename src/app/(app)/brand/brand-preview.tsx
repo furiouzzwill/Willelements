@@ -2,18 +2,33 @@
 
 import { useEffect, useState } from 'react'
 
+import { AlertCard } from '@/components/alerts/alert-card'
+import { ALERT_ANIMATION_CSS } from '@/components/alerts/animations.css'
+import { CanvasPreview } from '@/components/alerts/canvas-preview'
+import { defaultSpecFor } from '@/lib/schemas/alert'
 import type { BrandDna } from '@/lib/schemas/brand'
+import type { NormalizedEvent } from '@/lib/schemas/event'
 
 /**
- * Live preview of the brand as a follower alert.
+ * Live preview of the brand, as a follower alert.
  *
- * This is the point of Brand DNA made visible: change a colour and see the
- * thing your viewers will actually see. It reads the surrounding form rather
- * than the saved record, so it updates before you commit.
+ * Uses the same `AlertCard` the OBS runtime does, so this is not a mock-up that
+ * can drift — change a colour here and you are looking at the real thing.
  *
- * The motion here is illustrative, not the real alert runtime — Phase 6 builds
- * that inside the OBS browser source, where performance rules are different.
+ * It reads the surrounding form rather than the saved record, so it updates as
+ * you type rather than after you commit.
  */
+
+const SAMPLE: NormalizedEvent = {
+  type: 'channel.follow',
+  provider: 'twitch',
+  providerEventId: 'preview',
+  occurredAt: new Date(0).toISOString(),
+  actor: { id: 'preview', displayName: 'NightOwl_92' },
+  data: {},
+  isTest: true,
+}
+
 export function BrandPreview({ initial, logoUrl }: { initial: BrandDna; logoUrl: string | null }) {
   const [dna, setDna] = useState(initial)
   const [replay, setReplay] = useState(0)
@@ -25,7 +40,7 @@ export function BrandPreview({ initial, logoUrl }: { initial: BrandDna; logoUrl:
 
     function read() {
       const data = new FormData(form as HTMLFormElement)
-      const value = (key: string, fallback: string) => {
+      const colour = (key: string, fallback: string) => {
         const entry = data.get(key)
         return typeof entry === 'string' && /^#[0-9a-fA-F]{6}$/.test(entry) ? entry : fallback
       }
@@ -33,11 +48,11 @@ export function BrandPreview({ initial, logoUrl }: { initial: BrandDna; logoUrl:
       setDna((current) => ({
         ...current,
         colors: {
-          primary: value('primary', current.colors.primary),
-          secondary: value('secondary', current.colors.secondary),
-          accent: value('accent', current.colors.accent),
-          background: value('background', current.colors.background),
-          text: value('text', current.colors.text),
+          primary: colour('primary', current.colors.primary),
+          secondary: colour('secondary', current.colors.secondary),
+          accent: colour('accent', current.colors.accent),
+          background: colour('background', current.colors.background),
+          text: colour('text', current.colors.text),
         },
         typography: {
           ...current.typography,
@@ -55,66 +70,20 @@ export function BrandPreview({ initial, logoUrl }: { initial: BrandDna; logoUrl:
     }
   }, [])
 
-  const { colors, typography } = dna
-
   return (
     <div className="space-y-3">
-      <div
-        key={replay}
-        className="relative grid aspect-video place-items-center overflow-hidden rounded-lg border border-line"
-        style={{ background: colors.background }}
-      >
-        {/* A hint of the stream behind the overlay, so contrast is judged fairly. */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 opacity-40"
-          style={{
-            backgroundImage: `radial-gradient(60% 60% at 30% 20%, ${colors.primary}22, transparent), radial-gradient(50% 50% at 80% 80%, ${colors.secondary}22, transparent)`,
-          }}
+      <style dangerouslySetInnerHTML={{ __html: ALERT_ANIMATION_CSS }} />
+
+      <CanvasPreview>
+        <AlertCard
+          key={replay}
+          event={SAMPLE}
+          spec={defaultSpecFor('channel.follow')}
+          messageTemplate="{{username}}"
+          dna={dna}
+          logoUrl={logoUrl}
         />
-
-        <div className="animate-[preview-in_600ms_ease-out] relative flex flex-col items-center gap-3 px-6 text-center">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- a local asset route, already sized
-            <img src={logoUrl} alt="" className="size-14 object-contain" />
-          ) : (
-            <div
-              className="grid size-14 place-items-center rounded-xl text-lg font-bold"
-              style={{ background: colors.primary, color: colors.background }}
-              aria-hidden="true"
-            >
-              ★
-            </div>
-          )}
-
-          <p
-            className="text-xs font-semibold tracking-[0.2em] uppercase"
-            style={{ color: colors.accent, fontFamily: `${typography.heading}, sans-serif` }}
-          >
-            New follower
-          </p>
-
-          <p
-            className="text-3xl font-semibold"
-            style={{ color: colors.text, fontFamily: `${typography.heading}, sans-serif` }}
-          >
-            NightOwl_92
-          </p>
-
-          <p
-            className="text-sm"
-            style={{ color: colors.text, opacity: 0.7, fontFamily: `${typography.body}, sans-serif` }}
-          >
-            Thanks for the follow!
-          </p>
-
-          <span
-            aria-hidden="true"
-            className="mt-1 block h-0.5 w-24 rounded-full"
-            style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }}
-          />
-        </div>
-      </div>
+      </CanvasPreview>
 
       <button
         type="button"
@@ -123,13 +92,6 @@ export function BrandPreview({ initial, logoUrl }: { initial: BrandDna; logoUrl:
       >
         Replay preview
       </button>
-
-      <style>{`
-        @keyframes preview-in {
-          from { opacity: 0; transform: translateY(10px) scale(0.96); }
-          to   { opacity: 1; transform: none; }
-        }
-      `}</style>
     </div>
   )
 }

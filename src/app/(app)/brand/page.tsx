@@ -58,8 +58,8 @@ export default function BrandPage() {
           <div className="px-5 py-5">
             <BrandPreview initial={brand.dna} logoUrl={logoUrl} />
             <p className="mt-4 text-xs text-ink-subtle">
-              Colours and fonts update as you edit. The real alert runtime arrives in
-              Phase 6 — this shows the styling, not the final motion.
+              Colours and fonts update as you edit. This is the same renderer your OBS
+              overlay uses, so what you see here is what plays on stream.
             </p>
           </div>
         </Panel>

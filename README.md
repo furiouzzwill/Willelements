@@ -13,7 +13,7 @@ single folder you own.
 
 ## Current status
 
-**Phase 5 — Overlay runtime. Complete and validated.**
+**Phase 6 — Alert system. Complete and validated.**
 
 Working today:
 
@@ -33,16 +33,18 @@ Working today:
 - **OBS overlays** — transparent browser sources on rotatable opaque URLs, fed
   by Server-Sent Events, with alerts that queue rather than overlap and test
   events that travel the real pipeline
+- **Configurable alerts** for every event type — label, message template,
+  duration, animations, sound, volume and minimum thresholds, all styled from
+  your Brand DNA and previewed with the exact renderer OBS uses
 - One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- 112 tests, no test dependencies
+- 135 tests, no test dependencies
 
 Not working yet — and not pretended to:
 
-- Alerts are not yet configurable — one built-in style, no sounds (Phase 6)
-- No overlay editor or widgets beyond alerts (Phase 6)
 - No real Twitch events yet; alerts fire from tests only (Phase 7)
+- No overlay editor or widgets beyond alerts (Phase 8)
 - No AI generation (Phase 8 / 9)
 
 The dashboard shows **empty states rather than sample metrics**. Displaying a

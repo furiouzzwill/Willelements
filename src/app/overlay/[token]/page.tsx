@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 
 import { AlertLayer } from '@/app/overlay/[token]/alert-layer'
 import { defaultBrandDna } from '@/lib/schemas/brand'
+import { getOverlayAlertConfigs } from '@/lib/services/alert-service'
 import { getDefaultBrand } from '@/lib/services/brand-service'
 import { getOverlayByToken } from '@/lib/services/overlay-service'
 
@@ -34,5 +35,12 @@ export default async function OverlayPage({ params }: PageProps<'/overlay/[token
   const dna = brand?.dna ?? defaultBrandDna()
   const logoUrl = brand?.logoAssetId ? `/api/assets/${brand.logoAssetId}` : null
 
-  return <AlertLayer token={token} dna={dna} logoUrl={logoUrl} />
+  return (
+    <AlertLayer
+      token={token}
+      dna={dna}
+      logoUrl={logoUrl}
+      configs={getOverlayAlertConfigs()}
+    />
+  )
 }

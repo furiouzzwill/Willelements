@@ -3,7 +3,7 @@
 Each phase is focused, testable and shippable. A phase is not complete until
 typecheck, lint and build all pass and its exit criteria are demonstrably met.
 
-**Current position: Phase 5 complete.**
+**Current position: Phase 6 complete.**
 
 ---
 
@@ -175,20 +175,49 @@ ever on screen, rotated the token and confirmed the old URL returned 404.
 
 ---
 
-## Phase 6 — Alert system
+## Phase 6 — Alert system ✅
 
-One alert type, done properly: **follower**.
+Every event type, not just follows — the work was the same once the config
+existed.
 
-- [ ] Alert config editor: text template, duration, animation, sound
-- [ ] Brand DNA drives the styling
-- [ ] Live animation in the browser runtime — no render job
-- [ ] Alert queue: sequence rapid events instead of overlapping them
-- [ ] Test Alert travels the real pipeline
-- [ ] Basic overlay editor: alert box, image/logo, text, position, size
-- [ ] Overlay shows a visible connection-lost state (risk R3)
+- [x] Per-event editor: label, message template, duration, layout, entrance and
+      exit animation, element animations, logo toggle, sound and volume
+- [x] Configs created for every event type on first read, so a fresh database
+      and an existing one behave identically and a new event type in a later
+      phase needs no migration
+- [x] Brand DNA drives the styling throughout
+- [x] Six real entrance animations, transform and opacity only — the two
+      properties a browser composites without laying out or painting again,
+      which matters when the same machine is encoding a stream
+- [x] Minimum thresholds, so a 100-bit cheer alert stays quiet for a 50-bit one
+- [x] Sound upload and playback, with a refused autoplay never taking the visual
+      alert down with it
+- [x] Alerts queue (delivered in Phase 5)
+- [x] **One renderer** shared by the OBS runtime, the alert editor preview and
+      the Brand Studio preview — so a preview cannot drift from what plays
+- [x] Previews are true miniatures: the alert is laid out at 1920×1080 and
+      scaled as a whole, so line breaks land exactly where they will on stream
+- [x] Connection-lost state on the overlay after a 6s grace period (risk R3)
 
-**Exit:** a branded follower alert plays correctly in OBS, and five test events
-in a row queue rather than collide.
+**Exit met**, verified by driving a browser as OBS: configured a follow alert
+with a custom label, template, 3s duration and glitch entrance; confirmed it
+persisted across a reload; opened the overlay URL in a separate page; fired the
+alert and confirmed the configured text rendered; measured it clearing after
+~3.3s (3s + exit); disabled the alert and confirmed it no longer fires.
+
+The overlay editor and widgets moved to Phase 8 — alerts are the widget that
+matters, and placing static images is worth less than getting real Twitch events
+flowing first.
+
+Three bugs this phase found:
+
+- The word-reveal animation used a CSS gap for word spacing, so the alert's text
+  read "WELCOMEIN" — identical on screen, wrong for a screen reader, wrong when
+  copied, and wrong for anything reading the page.
+- Six navigation items were unlocked without a page behind them, so Next
+  prefetched them and got a stream of background 404s. A test now checks every
+  unlocked destination against the routes on disk.
+- Two navigation entries pointed at the same page.
 
 ---
 

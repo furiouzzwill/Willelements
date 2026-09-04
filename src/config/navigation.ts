@@ -7,12 +7,20 @@
  * rather than a dead link, so the app never lies about what works yet.
  */
 
-export const CURRENT_PHASE = 5
+export const CURRENT_PHASE = 6
 
 export type NavItem = {
   label: string
   href: string
-  /** Development phase in which this destination becomes functional. */
+  /**
+   * The phase in which this destination becomes functional.
+   *
+   * Lower this **only** when the route actually exists. Items at or below
+   * `CURRENT_PHASE` render as real links, and Next prefetches them — so an
+   * unlocked item without a page produces a stream of 404s in the background,
+   * and a dead link if anyone clicks it. There is a test that checks every
+   * unlocked destination against the routes on disk.
+   */
   phase: number
   description?: string
 }
@@ -52,12 +60,12 @@ export const navigation: NavSection[] = [
     icon: 'stream',
     items: [
       { label: 'Overlays', href: '/stream/overlays', phase: 5 },
-      { label: 'Overlay Editor', href: '/stream/editor', phase: 6 },
       { label: 'Alerts', href: '/stream/alerts', phase: 6 },
-      { label: 'Widgets', href: '/stream/widgets', phase: 6 },
-      { label: 'Scenes', href: '/stream/scenes', phase: 7 },
-      { label: 'Goals', href: '/stream/goals', phase: 6 },
-      { label: 'Labels', href: '/stream/labels', phase: 6 },
+      { label: 'Overlay Editor', href: '/stream/editor', phase: 8 },
+      { label: 'Widgets', href: '/stream/widgets', phase: 8 },
+      { label: 'Goals', href: '/stream/goals', phase: 8 },
+      { label: 'Labels', href: '/stream/labels', phase: 8 },
+      { label: 'Scenes', href: '/stream/scenes', phase: 9 },
     ],
   },
   {
@@ -117,17 +125,19 @@ export const navigation: NavSection[] = [
     icon: 'integrations',
     items: [
       { label: 'Twitch', href: '/integrations/twitch', phase: 4 },
+      { label: 'OBS', href: '/integrations/obs', phase: 8 },
       { label: 'YouTube', href: '/integrations/youtube', phase: 10 },
-      { label: 'OBS', href: '/integrations/obs', phase: 5 },
     ],
   },
   {
     label: 'Settings',
     icon: 'settings',
     items: [
+      // Connected accounts live under Integrations rather than being duplicated
+      // here — two navigation entries pointing at one page is a dead end for
+      // anyone trying to work out where a setting actually lives.
       { label: 'Storage', href: '/settings', phase: 1 },
-      { label: 'Connected Accounts', href: '/integrations/twitch', phase: 4 },
-      { label: 'Notifications', href: '/settings/notifications', phase: 6 },
+      { label: 'Notifications', href: '/settings/notifications', phase: 9 },
     ],
   },
 ]

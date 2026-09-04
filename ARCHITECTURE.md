@@ -233,11 +233,12 @@ truth.
 **R2 — FFmpeg is not installed.** *Blocking for Phase 8 rendering.* Needs
 installing on whatever machine runs the app.
 
-**R3 — The app must be running for alerts to work.** If it is closed or crashes
-mid-stream, alerts stop. This is true of every local streaming tool, but it is a
-real operational property: start it before going live, and Phase 6 should make
-the overlay visibly indicate a lost connection rather than silently doing
-nothing.
+**R3 — The app must be running for alerts to work.** *Mitigated in Phase 6.* If
+it is closed or crashes mid-stream, alerts stop — true of every local streaming
+tool. The overlay now shows a "disconnected" badge after six seconds offline,
+so a dead socket is distinguishable from a quiet stream. The grace period exists
+because `EventSource` reconnects within seconds, and flashing a warning over the
+gameplay for every brief blip would be worse than the blip.
 
 **R4 — One machine, no redundancy.** *Mitigated in Phase 2.* Settings exports a
 zip of the database and every asset, and restores one. The database is captured
