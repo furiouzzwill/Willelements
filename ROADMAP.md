@@ -3,7 +3,7 @@
 Each phase is focused, testable and shippable. A phase is not complete until
 typecheck, lint and build all pass and its exit criteria are demonstrably met.
 
-**Current position: Phase 6 complete.**
+**Current position: Phase 7 complete — pending a live Twitch connection.**
 
 ---
 
@@ -221,18 +221,50 @@ Three bugs this phase found:
 
 ---
 
-## Phase 7 — Twitch events
+## Phase 7 — Twitch events ✅ (pending your credentials)
 
-- [ ] **EventSub WebSocket client**: welcome, keepalive, reconnect, revocation
-- [ ] Create subscriptions via Helix using the session ID
-- [ ] Reconnect with backoff; surface connection state in the UI
-- [ ] Normalize into the internal event shape
-- [ ] Persist to `stream_events`, deduplicated by the unique constraint
-- [ ] Activity feed
-- [ ] Push to the overlay over SSE
+Protocol verified against the official docs before writing any code:
 
-**Exit:** a real Twitch follow appears in the activity feed *and* fires the
-alert in OBS. **This is the milestone.**
+- `wss://eventsub.wss.twitch.tv/ws`, keepalive 10–600s
+- Subscriptions must be created within **10 seconds** of the welcome message or
+  Twitch closes the connection
+- On `session_reconnect`, connect to the new URL and do **not** close the old
+  socket until the replacement sends its own welcome
+- `channel.follow` is **v2** and needs both `broadcaster_user_id` and
+  `moderator_user_id`
+- Raids and stream online/offline need **no scope at all**
+
+- [x] EventSub WebSocket client: welcome, keepalive, notification, reconnect
+      and revocation, all handled
+- [x] Subscriptions created together on welcome, inside the 10s window
+- [x] Silence watchdog — a socket can stay open while the connection behind it
+      is gone, which is what a laptop waking from sleep looks like
+- [x] Reconnect with exponential backoff capped at a minute
+- [x] Normalization into the provider-neutral shape; unknown types skipped
+      rather than stored half-understood
+- [x] Persisted to `stream_events`, deduplicated by the unique constraint —
+      replaying an alert for a follow that already fired is worse than dropping
+      it
+- [x] Activity feed, with test events recorded but excluded by default
+- [x] Live connection status in the UI
+- [x] Scopes derived from the subscriptions, so the consent screen and the
+      feature set cannot drift apart; a token that predates a scope degrades
+      gracefully and the UI says exactly what reconnecting would add
+- [x] Listener started from `instrumentation.ts` on server boot, and restarted
+      when an account is connected or disconnected
+
+**Proven:** Twitch-shaped payload → normalize → record → dedupe → publish →
+OBS → branded alert. Verified in tests with real EventSub payload shapes, and
+in a browser: fired a raid, watched "SynthFox raided with 150" render in the
+overlay, confirmed it was recorded, excluded from the real feed, visible and
+marked when tests are shown, and cleared on request.
+
+**Not yet proven:** the WebSocket itself carrying a genuine Twitch event. That
+needs a registered Twitch app connected to a real channel — the one step that
+cannot be done without your credentials.
+
+Test events now go through `recordEvent`, the same door a real event uses, so a
+passing test genuinely exercises the real path rather than a shortcut past it.
 
 ---
 

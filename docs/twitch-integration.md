@@ -1,6 +1,6 @@
 # Twitch integration
 
-**Status: connection implemented (Phase 4). Events planned (Phase 7).**
+**Status: connection and events both implemented (Phases 4 and 7).**
 
 > ⚠️ **Read the current official documentation before writing any code**:
 > <https://dev.twitch.tv/docs/>
@@ -92,17 +92,40 @@ Confirm at implementation time, from the official docs:
 - [ ] Subscription limits per session
 - [ ] The current version and authorisation requirement of each subscription type
 
-### Client requirements
+### What the client does
 
-- Connect, read the welcome message, and use its session ID when creating
-  subscriptions via the Helix API.
-- Respond to **reconnect** messages by connecting to the supplied URL before
-  dropping the old socket, so no events are missed in the gap.
-- Treat a missed keepalive as a dead connection and reconnect with backoff.
-- Handle **revocation** — a subscription can be revoked when authorisation is
-  withdrawn or the app's permissions change.
-- Deduplicate on the message ID. Twitch may redeliver; the unique constraint on
-  `stream_events` is the backstop.
+All implemented in `src/lib/providers/twitch/eventsub.ts`:
+
+- Connects, reads the welcome message, and creates every allowed subscription
+  **together** — Twitch closes the connection if nothing is subscribed within
+  ten seconds of the welcome.
+- On **reconnect**, connects to the supplied URL and keeps the old socket until
+  the replacement sends its own welcome, so no events fall through the gap.
+- Runs a silence watchdog. A socket can stay open while the connection behind it
+  is gone — a laptop waking from sleep is the usual cause — and Twitch
+  guarantees a keepalive when nothing else arrives, so silence past the interval
+  means the connection is dead regardless of what the socket reports.
+- Reconnects with exponential backoff capped at a minute. A creator whose
+  network came back should not wait ten minutes for alerts to resume.
+- Handles **revocation** and surfaces it as "reconnect the platform".
+- Deduplicates on Twitch's message id via the unique constraint on
+  `stream_events`.
+
+### Subscriptions and what each costs
+
+| Event | Version | Scope |
+| --- | --- | --- |
+| `channel.follow` | 2 | `moderator:read:followers` |
+| `channel.raid` | 1 | **none** |
+| `stream.online` / `stream.offline` | 1 | **none** |
+| `channel.subscribe` | 1 | `channel:read:subscriptions` |
+| `channel.subscription.gift` | 1 | `channel:read:subscriptions` |
+| `channel.cheer` | 1 | `bits:read` |
+
+Scopes are derived from this table rather than listed separately, so the consent
+screen and the feature set cannot drift apart. A token granted before a scope
+existed keeps working: the client subscribes to what it can, and the UI names
+exactly what reconnecting would add.
 
 ### Reconnect behaviour matters more than it looks
 

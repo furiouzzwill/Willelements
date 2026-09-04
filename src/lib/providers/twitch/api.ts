@@ -2,6 +2,8 @@ import 'server-only'
 
 import { z } from 'zod'
 
+import { ALL_SCOPES } from '@/lib/providers/twitch/subscriptions'
+
 /**
  * Twitch API client.
  *
@@ -20,13 +22,14 @@ const HELIX_BASE = 'https://api.twitch.tv/helix'
 /**
  * Scopes we request.
  *
- * `moderator:read:followers` is the whole list, and it buys two things: the
- * follower count, and the `channel.follow` (v2) EventSub subscription that
- * Phase 7 needs. Everything else waits until a feature actually needs it —
- * a consent screen that asks for subscriptions and chat before either works
- * is asking the creator to grant on trust.
+ * Derived from the EventSub subscriptions we actually create, so the consent
+ * screen and the feature set can never drift apart. Each one buys a specific
+ * alert type — nothing is requested speculatively.
+ *
+ * Raids and stream online/offline need no scope at all, so a connection is
+ * useful even to a creator who grants nothing beyond the minimum.
  */
-export const TWITCH_SCOPES = ['moderator:read:followers'] as const
+export const TWITCH_SCOPES = ALL_SCOPES
 
 export class TwitchApiError extends Error {
   readonly status: number

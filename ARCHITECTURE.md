@@ -104,9 +104,9 @@ Two decisions worth stating:
 This is what has to work while someone is streaming.
 
 ```
-Twitch EventSub (WebSocket)
+Twitch EventSub (WebSocket)   started from instrumentation.ts on boot
         ▼
-  Provider adapter          verify, dedupe, normalize
+  Provider adapter          normalize; unknown types skipped
         ▼
   Normalized event          { type, provider, timestamp, actor, data, isTest }
         ▼
@@ -215,7 +215,7 @@ no return.
 | Zero running cost | ✅ | Only OpenAI (Phase 9) ever costs money |
 | Persistent storage | ✅ | SQLite + files in `data/` |
 | Twitch OAuth | ✅ | Implemented — loopback redirect, encrypted tokens |
-| Twitch events | ✅ | EventSub **WebSocket** — no public URL needed (Phase 7) |
+| Twitch events | ✅ | Implemented — EventSub **WebSocket**, no public URL needed |
 | OBS browser sources | ✅ | Lean route, opaque token, SSE |
 | Brand DNA | ✅ | JSON columns on `brands` |
 | HyperFrames | ⚠️ | Not installed — risk R1 |

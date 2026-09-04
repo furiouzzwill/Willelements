@@ -123,18 +123,20 @@ describe('event delivery', () => {
     return received
   }
 
-  test('an event reaches only the overlay it was addressed to', () => {
+  test('an event reaches every connected overlay', () => {
     const a = makeOverlay('A')
     const b = makeOverlay('B')
 
     const toA = connect(a.id)
     const toB = connect(b.id)
 
-    const delivered = testEvents.sendTestEvent('channel.follow', a.id)
+    const delivered = testEvents.sendTestEvent('channel.follow')
 
-    assert.equal(delivered, 1)
+    // Events go to every overlay; which alert plays is each overlay's own
+    // decision, made from its own configuration.
+    assert.equal(delivered, 2)
     assert.equal(toA.length, 1)
-    assert.equal(toB.length, 0, 'other overlays must not receive it')
+    assert.equal(toB.length, 1)
   })
 
   test('every connection to one overlay receives it', () => {
@@ -143,7 +145,7 @@ describe('event delivery', () => {
     const first = connect(overlay.id)
     const second = connect(overlay.id)
 
-    const delivered = testEvents.sendTestEvent('channel.raid', overlay.id)
+    const delivered = testEvents.sendTestEvent('channel.raid')
 
     assert.equal(delivered, 2)
     assert.equal(first.length, 1)
@@ -152,8 +154,7 @@ describe('event delivery', () => {
 
   test('reports zero when nothing is listening', () => {
     // This is what lets the UI say "open it in OBS" instead of appearing to work.
-    const overlay = makeOverlay('Nobody home')
-    assert.equal(testEvents.sendTestEvent('channel.follow', overlay.id), 0)
+    assert.equal(testEvents.sendTestEvent('channel.follow'), 0)
   })
 
   test('disconnecting stops delivery', () => {
@@ -164,11 +165,11 @@ describe('event delivery', () => {
       send: (m) => received.push(m),
     })
 
-    testEvents.sendTestEvent('channel.follow', overlay.id)
+    testEvents.sendTestEvent('channel.follow')
     assert.equal(received.length, 1)
 
     unsubscribe()
-    testEvents.sendTestEvent('channel.follow', overlay.id)
+    testEvents.sendTestEvent('channel.follow')
     assert.equal(received.length, 1, 'no delivery after disconnect')
   })
 
@@ -186,7 +187,7 @@ describe('event delivery', () => {
     )
     cleanups.push(bus.subscribe({ overlayId: overlay.id, send: (m) => healthy.push(m) }))
 
-    const delivered = testEvents.sendTestEvent('channel.follow', overlay.id)
+    const delivered = testEvents.sendTestEvent('channel.follow')
 
     assert.equal(healthy.length, 1, 'the working source still got it')
     assert.equal(delivered, 1, 'and the broken one was not counted')

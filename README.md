@@ -13,7 +13,7 @@ single folder you own.
 
 ## Current status
 
-**Phase 6 — Alert system. Complete and validated.**
+**Phase 7 — Twitch events. Complete, pending a live connection.**
 
 Working today:
 
@@ -36,15 +36,20 @@ Working today:
 - **Configurable alerts** for every event type — label, message template,
   duration, animations, sound, volume and minimum thresholds, all styled from
   your Brand DNA and previewed with the exact renderer OBS uses
+- **Live Twitch events** over EventSub WebSocket — follows, raids, subs, gift
+  subs, cheers and stream online/offline, normalized, deduplicated, recorded and
+  pushed straight to your overlay
+- **Activity feed** with live connection status
 - One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- 135 tests, no test dependencies
+- 160 tests, no test dependencies
 
 Not working yet — and not pretended to:
 
-- No real Twitch events yet; alerts fire from tests only (Phase 7)
 - No overlay editor or widgets beyond alerts (Phase 8)
+- No analytics pages yet (Phase 10)
+- No AI generation (Phase 8 / 9)
 - No AI generation (Phase 8 / 9)
 
 The dashboard shows **empty states rather than sample metrics**. Displaying a

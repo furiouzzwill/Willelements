@@ -4,6 +4,7 @@ import { siteUrl, twitchCredentials } from '@/lib/env'
 import { exchangeCode, getCurrentUser } from '@/lib/providers/twitch/api'
 import { twitchRedirectUri } from '@/lib/providers/twitch/config'
 import { consumeState } from '@/lib/providers/twitch/oauth-state'
+import { restartTwitchListener } from '@/lib/providers/twitch/eventsub'
 import { saveConnection } from '@/lib/services/connected-account-service'
 
 /**
@@ -56,6 +57,10 @@ export async function GET(request: NextRequest) {
       tokens,
       metadata: { broadcasterType: user.broadcaster_type },
     })
+
+    // Pick up the new token and any newly granted scopes immediately, rather
+    // than waiting for the next restart.
+    void restartTwitchListener()
 
     return NextResponse.redirect(`${settings}?connected=1`)
   } catch (error) {

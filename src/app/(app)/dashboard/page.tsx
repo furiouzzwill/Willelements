@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
-import { LiveStatus, RecentFollowers } from '@/app/(app)/dashboard/live-status'
+import { LiveStatus } from '@/app/(app)/dashboard/live-status'
+import { ActivityList } from '@/components/activity/activity-list'
 import { PageHeader } from '@/components/shell/page-header'
 import { Panel, PanelHeader } from '@/components/ui/panel'
 import { ButtonLink } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { CURRENT_PHASE, navigation } from '@/config/navigation'
 import { getDefaultBrand } from '@/lib/services/brand-service'
 import { getSetupState } from '@/lib/services/setup-service'
 import { getChannelState } from '@/lib/services/twitch-service'
+import { listActivity } from '@/lib/services/event-service'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -53,6 +55,7 @@ export default async function DashboardPage() {
   const brand = getDefaultBrand()
   const setup = getSetupState()
   const channel = await getChannelState()
+  const activity = listActivity({ limit: 6 })
 
   // The next destinations to unlock, whichever phases they fall in. Labels are
   // deduplicated because some names appear under more than one section — a list
@@ -92,7 +95,29 @@ export default async function DashboardPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <LiveStatus state={channel} />
-        <RecentFollowers state={channel} />
+
+        <Panel>
+          <PanelHeader
+            title="Recent activity"
+            description="Follows, subs, raids and cheers"
+            action={
+              activity.length > 0 ? (
+                <ButtonLink href="/activity" variant="ghost" size="sm">
+                  View all
+                </ButtonLink>
+              ) : undefined
+            }
+          />
+          <ActivityList
+            entries={activity}
+            emptyTitle="No events yet"
+            emptyDescription={
+              setup.hasConnectedAccount
+                ? 'Events appear the moment they happen on your channel.'
+                : 'Connect Twitch and real events will land here.'
+            }
+          />
+        </Panel>
       </div>
 
       <Panel>

@@ -2,8 +2,8 @@ import 'server-only'
 
 import { randomUUID } from 'node:crypto'
 
-import { publish } from '@/lib/events/bus'
 import { normalizedEvent, type EventType, type NormalizedEvent } from '@/lib/schemas/event'
+import { recordEvent } from '@/lib/services/event-service'
 
 /**
  * Simulated events for previewing a setup.
@@ -57,7 +57,18 @@ export function buildTestEvent(type: EventType): NormalizedEvent {
   })
 }
 
-/** Fires a test event at one overlay. Returns how many connections received it. */
-export function sendTestEvent(type: EventType, overlayId: string): number {
-  return publish(buildTestEvent(type), overlayId)
+/**
+ * Fires a test event. Returns how many overlay connections received it.
+ *
+ * Goes through `recordEvent`, the same door a real Twitch event comes through —
+ * so it is persisted, deduplicated and fanned out identically. Publishing
+ * straight to the bus would have made the test exercise less than it claims,
+ * and the whole point of a test event is that a passing test means the real
+ * path works.
+ *
+ * It is stored with `isTest: true`, so it never pollutes the activity feed or
+ * counts as real activity.
+ */
+export function sendTestEvent(type: EventType): number {
+  return recordEvent(buildTestEvent(type)).delivered
 }

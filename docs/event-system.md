@@ -1,6 +1,6 @@
 # Event system
 
-**Status: planned (Phase 7). Not implemented.**
+**Status: implemented (Phase 7).**
 
 ## Internal event shape
 
@@ -46,6 +46,8 @@ Streamers depend on this while live, so:
 - **Authenticated transport.** Events arrive over the app's own authenticated
   EventSub WebSocket, not an open HTTP endpoint, so there is no unauthenticated
   request to forge.
+- **One door.** Every event — real or test — goes through `recordEvent`. There
+  is one place to reason about ordering and one place duplicates are stopped.
 - **Reconnect.** The EventSub client reconnects with backoff and honours
   Twitch's reconnect messages; the overlay's `EventSource` reconnects on its
   own.

@@ -98,7 +98,9 @@ export async function testAlertAction(
   const parsedType = z.enum(EVENT_TYPES).safeParse(type)
   if (!parsedType.success) return { error: 'Unknown event type.' }
 
-  const delivered = sendTestEvent(parsedType.data, id)
+  // Delivered to every connected overlay, exactly as a real event would be —
+  // which overlay shows what is each overlay's own decision.
+  const delivered = sendTestEvent(parsedType.data)
 
   if (delivered === 0) {
     return {

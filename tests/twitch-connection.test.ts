@@ -92,12 +92,33 @@ describe('the authorize URL', () => {
     )
   })
 
-  test('requests only the scopes we actually use', () => {
+  test('requests exactly the scopes the subscriptions need — no more', async () => {
+    // Scopes are derived from the EventSub subscriptions rather than listed by
+    // hand, so the consent screen and the feature set cannot drift apart.
+    const { SUBSCRIPTIONS } = await import('../src/lib/providers/twitch/subscriptions.ts')
+
     const url = new URL(
       api.authorizeUrl({ clientId: 'a', redirectUri: 'http://localhost:3000/x', state: 's' }),
     )
+    const requested = url.searchParams.get('scope')?.split(' ') ?? []
+    const needed = [
+      ...new Set(SUBSCRIPTIONS.map((s) => s.scope).filter((s): s is string => s !== null)),
+    ]
 
-    assert.deepEqual(url.searchParams.get('scope')?.split(' '), ['moderator:read:followers'])
+    assert.deepEqual(requested.sort(), needed.sort())
+    assert.ok(
+      requested.includes('moderator:read:followers'),
+      'follower alerts need this one',
+    )
+  })
+
+  test('raids and stream online/offline need no scope at all', async () => {
+    // Worth asserting: it means a connection is useful even to a creator who
+    // grants nothing beyond the minimum.
+    const { SUBSCRIPTIONS } = await import('../src/lib/providers/twitch/subscriptions.ts')
+    const free = SUBSCRIPTIONS.filter((s) => s.scope === null).map((s) => s.eventType)
+
+    assert.deepEqual(free.sort(), ['channel.raid', 'stream.offline', 'stream.online'])
   })
 })
 
