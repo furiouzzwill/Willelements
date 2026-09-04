@@ -116,8 +116,14 @@ export function OverlayPreview({ url, width, height }: { url: string; width: num
             src={url}
             title="Overlay preview"
             className="absolute inset-0 size-full border-0"
-            // The overlay needs no privileges; it only reads its own stream.
-            sandbox="allow-scripts allow-same-origin"
+            /*
+             * Deliberately unsandboxed. This is our own first-party page on the
+             * same origin, and the only combination that would let it open its
+             * event stream — allow-scripts plus allow-same-origin — is one the
+             * browser correctly warns is equivalent to no sandbox at all.
+             * Claiming a sandbox that does nothing is worse than not claiming
+             * one.
+             */
           />
         ) : null}
       </div>

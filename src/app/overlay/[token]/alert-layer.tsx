@@ -4,10 +4,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { AlertCard, EXIT_MS } from '@/components/alerts/alert-card'
 import { ALERT_ANIMATION_CSS } from '@/components/alerts/animations.css'
+import { applyEvent, type WidgetData } from '@/components/widgets/widget-data'
+import { WidgetRenderer } from '@/components/widgets/widget-renderer'
 import { meetsThreshold } from '@/lib/schemas/alert'
 import type { OverlayAlertConfig } from '@/lib/services/alert-service'
 import type { BrandDna } from '@/lib/schemas/brand'
 import type { NormalizedEvent } from '@/lib/schemas/event'
+import type { OverlayWidgetModel } from '@/lib/schemas/overlay'
 
 /**
  * The live alert runtime.
@@ -33,13 +36,22 @@ export function AlertLayer({
   dna,
   logoUrl,
   configs,
+  widgets,
+  canvasWidth,
+  canvasHeight,
+  initialWidgetData,
 }: {
   token: string
   dna: BrandDna
   logoUrl: string | null
   configs: OverlayAlertConfig[]
+  widgets: OverlayWidgetModel[]
+  canvasWidth: number
+  canvasHeight: number
+  initialWidgetData: WidgetData
 }) {
   const [queue, setQueue] = useState<QueuedAlert[]>([])
+  const [widgetData, setWidgetData] = useState(initialWidgetData)
   const [leavingId, setLeavingId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
   const [showOffline, setShowOffline] = useState(false)
@@ -63,6 +75,8 @@ export function AlertLayer({
   // Tracked by id rather than as a boolean, so it resets itself when the next
   // alert is promoted instead of needing to be cleared on every change.
   const leaving = current !== null && leavingId === current.id
+
+  const alertBox = widgets.find((widget) => widget.type === 'alert-box') ?? null
 
   const playSound = useCallback((config: OverlayAlertConfig) => {
     if (!config.soundUrl) return
@@ -96,6 +110,11 @@ export function AlertLayer({
         const key = `${event.provider}:${event.providerEventId}`
         if (seen.current.has(key)) return
         seen.current.add(key)
+
+        // Widgets update for every event, regardless of whether an alert
+        // plays: a "latest follower" widget should be right even when the
+        // follow alert is switched off.
+        setWidgetData((current) => applyEvent(current, event))
 
         const config = configsRef.current.find((entry) => entry.eventType === event.type)
 
@@ -166,6 +185,42 @@ export function AlertLayer({
     >
       <style dangerouslySetInnerHTML={{ __html: ALERT_ANIMATION_CSS }} />
 
+      {/*
+        Widgets sit at fixed canvas coordinates. OBS is told to render the
+        browser source at exactly this size, so no scaling is involved and a
+        widget lands where the editor put it, to the pixel.
+      */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: canvasWidth,
+          height: canvasHeight,
+        }}
+      >
+        {widgets.map((widget) => (
+          <div
+            key={widget.id}
+            style={{
+              position: 'absolute',
+              left: widget.x,
+              top: widget.y,
+              width: widget.width,
+              height: widget.height,
+              zIndex: widget.zIndex,
+            }}
+          >
+            <WidgetRenderer
+              widget={widget}
+              dna={dna}
+              data={widgetData}
+              logoUrl={logoUrl}
+            />
+          </div>
+        ))}
+      </div>
+
       {/* Connection state, only while nothing is playing so it can never sit
           on top of an alert. */}
       {!current ? (
@@ -213,15 +268,35 @@ export function AlertLayer({
       ) : null}
 
       {current ? (
-        <AlertCard
-          key={current.id}
-          event={current.event}
-          spec={current.config.spec}
-          messageTemplate={current.config.messageTemplate}
-          dna={dna}
-          logoUrl={logoUrl}
-          leaving={leaving}
-        />
+        <div
+          // An alert-box widget decides where alerts appear; without one they
+          // sit in the middle of the canvas, which is the sensible default.
+          style={
+            alertBox
+              ? {
+                  position: 'absolute',
+                  left: alertBox.x,
+                  top: alertBox.y,
+                  width: alertBox.width,
+                  height: alertBox.height,
+                  display: 'grid',
+                  placeItems: 'center',
+                  // Above every widget, whatever their stacking order.
+                  zIndex: 10_000,
+                }
+              : undefined
+          }
+        >
+          <AlertCard
+            key={current.id}
+            event={current.event}
+            spec={current.config.spec}
+            messageTemplate={current.config.messageTemplate}
+            dna={dna}
+            logoUrl={logoUrl}
+            leaving={leaving}
+          />
+        </div>
       ) : null}
     </div>
   )

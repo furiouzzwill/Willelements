@@ -6,6 +6,8 @@ import { defaultBrandDna } from '@/lib/schemas/brand'
 import { getOverlayAlertConfigs } from '@/lib/services/alert-service'
 import { getDefaultBrand } from '@/lib/services/brand-service'
 import { getOverlayByToken } from '@/lib/services/overlay-service'
+import { buildWidgetData } from '@/lib/services/widget-data-service'
+import { listWidgets } from '@/lib/services/widget-service'
 
 /**
  * The page an OBS browser source loads.
@@ -41,6 +43,10 @@ export default async function OverlayPage({ params }: PageProps<'/overlay/[token
       dna={dna}
       logoUrl={logoUrl}
       configs={getOverlayAlertConfigs()}
+      widgets={listWidgets(overlay.id)}
+      canvasWidth={overlay.canvasWidth}
+      canvasHeight={overlay.canvasHeight}
+      initialWidgetData={await buildWidgetData()}
     />
   )
 }

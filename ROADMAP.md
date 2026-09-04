@@ -3,7 +3,7 @@
 Each phase is focused, testable and shippable. A phase is not complete until
 typecheck, lint and build all pass and its exit criteria are demonstrably met.
 
-**Current position: Phase 7 complete — pending a live Twitch connection.**
+**Current position: Phase 8 complete — pending a live Twitch connection.**
 
 ---
 
@@ -268,10 +268,51 @@ passing test genuinely exercises the real path rather than a shortcut past it.
 
 ---
 
-## Phase 8 — HyperFrames
+## Phase 8 — Overlay editor and widgets ✅
 
-> **Blocked** until the HyperFrames skill and CLI are installed (risk R1) and
-> FFmpeg is available (risk R2).
+HyperFrames was the original Phase 8 but is **still blocked** — no skill, no
+CLI, no FFmpeg (risks R1 and R2, re-checked). The overlay editor was unblocked
+and worth more, so it took this slot; HyperFrames moves to Phase 9.
+
+- [x] Eight widget types: alert box, text, image, latest follower, latest
+      subscriber, recent events, follower goal, clock
+- [x] Editor with drag, resize from any corner, layer reordering, lock,
+      duplicate, delete and a per-type properties panel
+- [x] Positions stored in **canvas pixels**, not percentages, so an overlay
+      built for 1920×1080 lands identically in OBS regardless of the size the
+      editor happened to be displayed at
+- [x] Drag tracked locally at pointer speed and written once on release —
+      saving on every pointer move would be hundreds of writes per drag
+- [x] **One widget renderer** shared by the editor and the runtime, so the
+      editor cannot show you something different from what goes on stream
+- [x] The alert box positions alerts rather than drawing anything: visible in
+      the editor, invisible on stream
+- [x] Widgets update live from the same event stream that drives alerts — a
+      "latest follower" widget changes the moment the alert plays, with no
+      polling and no second connection
+- [x] Widget values update even when the matching alert is disabled
+
+**Exit met**, verified in a browser: placed three widgets, dragged one 161px and
+confirmed the position survived a reload, edited a label through the properties
+panel, then opened the overlay URL and confirmed the same widgets rendered with
+the custom label, that the alert box was invisible on stream, and that firing a
+follow updated the latest-follower widget live.
+
+Three things this phase found:
+- The properties panel's labels were not bound to their inputs, so a screen
+  reader announced the controls with no name.
+- The palette and the layers list had buttons with identical visible text, so
+  neither could be told apart by name.
+- The overlay preview iframe declared `allow-scripts allow-same-origin`, a
+  combination the browser correctly warns is equivalent to no sandbox at all.
+  Claiming a sandbox that does nothing is worse than not claiming one.
+
+---
+
+## Phase 9 — HyperFrames
+
+> **Still blocked** as of this phase: no HyperFrames skill, no CLI, and no
+> FFmpeg (risks R1 and R2).
 
 - [ ] Install and verify the tooling; read it as the source of truth
 - [ ] Convert Brand DNA into a HyperFrames visual identity

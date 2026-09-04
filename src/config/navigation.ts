@@ -7,7 +7,7 @@
  * rather than a dead link, so the app never lies about what works yet.
  */
 
-export const CURRENT_PHASE = 7
+export const CURRENT_PHASE = 8
 
 export type NavItem = {
   label: string
@@ -61,11 +61,11 @@ export const navigation: NavSection[] = [
     items: [
       { label: 'Overlays', href: '/stream/overlays', phase: 5 },
       { label: 'Alerts', href: '/stream/alerts', phase: 6 },
-      { label: 'Overlay Editor', href: '/stream/editor', phase: 8 },
-      { label: 'Widgets', href: '/stream/widgets', phase: 8 },
-      { label: 'Goals', href: '/stream/goals', phase: 8 },
-      { label: 'Labels', href: '/stream/labels', phase: 8 },
-      { label: 'Scenes', href: '/stream/scenes', phase: 9 },
+      // The editor lives on an overlay rather than as a standalone page —
+      // there is nothing to edit without knowing which overlay you mean.
+      { label: 'Goals', href: '/stream/goals', phase: 10 },
+      { label: 'Labels', href: '/stream/labels', phase: 10 },
+      { label: 'Scenes', href: '/stream/scenes', phase: 11 },
     ],
   },
   {
@@ -75,7 +75,7 @@ export const navigation: NavSection[] = [
       { label: 'AI Create', href: '/create', phase: 9 },
       { label: 'Stream Packages', href: '/create/packages', phase: 9 },
       { label: 'Graphics', href: '/create/graphics', phase: 9 },
-      { label: 'Animations', href: '/create/animations', phase: 8 },
+      { label: 'Animations', href: '/create/animations', phase: 9 },
       { label: 'Social Content', href: '/create/social', phase: 9 },
       { label: 'Templates', href: '/create/templates', phase: 9 },
     ],
@@ -125,7 +125,7 @@ export const navigation: NavSection[] = [
     icon: 'integrations',
     items: [
       { label: 'Twitch', href: '/integrations/twitch', phase: 4 },
-      { label: 'OBS', href: '/integrations/obs', phase: 8 },
+      { label: 'OBS', href: '/integrations/obs', phase: 10 },
       { label: 'YouTube', href: '/integrations/youtube', phase: 10 },
     ],
   },

@@ -1,6 +1,6 @@
 # Overlay system
 
-**Status: runtime implemented (Phase 5). Widgets and the editor planned (Phase 6).**
+**Status: runtime, widgets and editor all implemented (Phases 5, 6 and 8).**
 
 ## Model
 
@@ -17,8 +17,27 @@ Latest Follower, Latest Subscriber, Recent Events, Follower Goal, Subscriber
 Goal, Donation Goal, Countdown, Clock, Social Rotator, Viewer Count, Stream
 Labels, Media. MVP ships Alert Box, Image/logo and Text.
 
-Phase 5 renders alerts directly rather than through the widget system; Phase 6
-introduces widgets and the editor that places them.
+Eight types are built: alert box, text, image, latest follower, latest
+subscriber, recent events, follower goal and clock. The registry is closed — a
+type that is not in it is rejected rather than passed through, which is the
+boundary that keeps generated content from becoming generated behaviour once AI
+starts editing overlays.
+
+Positions are stored in **canvas pixels**, not percentages. An overlay built for
+1920×1080 lands identically in OBS regardless of what size the editor was
+displayed at.
+
+The **alert box** is a position, not a thing that draws: visible in the editor,
+invisible on stream. Without one, alerts sit in the middle of the canvas.
+
+One renderer serves the editor and the runtime, so the editor cannot show you
+something different from what goes on stream.
+
+Widget values are seeded when the overlay loads and then updated from the same
+event stream that drives alerts — a "latest follower" widget changes the moment
+the alert plays, with no polling and no second connection. It updates even when
+the matching alert is switched off, because the widget should be right either
+way.
 
 ## The event stream
 

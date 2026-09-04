@@ -123,13 +123,13 @@ export default async function DashboardPage() {
       <Panel>
         <PanelHeader
           title="What's next"
-          description={`Phase ${CURRENT_PHASE} is done — overlays render in OBS`}
+          description={`Phase ${CURRENT_PHASE} is done — build your overlay layout`}
         />
         <div className="space-y-4 px-5 py-5">
           <p className="text-sm text-ink-muted">
-            Overlays are working: create one, paste its URL into OBS, and test alerts play
-            through the real pipeline. Next is the alert system proper — configurable
-            follower alerts styled from your Brand DNA — and then real Twitch events.
+            Overlays, alerts and live Twitch events all work. Place widgets on your
+            overlay with the editor, then connect Twitch and everything starts filling
+            with real data.
           </p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {upcoming.map((item) => (

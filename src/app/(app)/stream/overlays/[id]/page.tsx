@@ -34,9 +34,14 @@ export default async function OverlayDetailPage({
         title={overlay.name}
         description={`${overlay.canvasWidth} × ${overlay.canvasHeight} browser source`}
         action={
-          <ButtonLink href="/stream/overlays" variant="ghost" size="sm">
-            All overlays
-          </ButtonLink>
+          <div className="flex gap-2">
+            <ButtonLink href="/stream/overlays" variant="ghost" size="sm">
+              All overlays
+            </ButtonLink>
+            <ButtonLink href={`/stream/overlays/${overlay.id}/editor`} size="sm">
+              Edit layout
+            </ButtonLink>
+          </div>
         }
       />
 

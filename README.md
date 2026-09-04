@@ -13,7 +13,7 @@ single folder you own.
 
 ## Current status
 
-**Phase 7 — Twitch events. Complete, pending a live connection.**
+**Phase 8 — Overlay editor. Complete, pending a live Twitch connection.**
 
 Working today:
 
@@ -40,16 +40,17 @@ Working today:
   subs, cheers and stream online/offline, normalized, deduplicated, recorded and
   pushed straight to your overlay
 - **Activity feed** with live connection status
+- **Overlay editor** — drag and resize eight widget types onto your canvas,
+  layered and configurable, rendered by the same code that runs in OBS
 - One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- 160 tests, no test dependencies
+- 181 tests, no test dependencies
 
 Not working yet — and not pretended to:
 
-- No overlay editor or widgets beyond alerts (Phase 8)
+- No AI generation (Phase 9 / 10) — HyperFrames is blocked, see ARCHITECTURE R1
 - No analytics pages yet (Phase 10)
-- No AI generation (Phase 8 / 9)
 - No AI generation (Phase 8 / 9)
 
 The dashboard shows **empty states rather than sample metrics**. Displaying a
