@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { choosePrimaryLogo, removeAsset } from '@/app/(app)/brand/actions'
 import { UploadForm } from '@/app/(app)/brand/logos/upload-form'
 import { PageHeader } from '@/components/shell/page-header'
+import { Checkerboard } from '@/components/ui/checkerboard'
 import { Button } from '@/components/ui/button'
 import { EmptyState, Panel, PanelHeader } from '@/components/ui/panel'
 import { listAssets } from '@/lib/services/asset-service'
@@ -49,24 +50,14 @@ export default function LogosPage() {
                   key={logo.id}
                   className="space-y-3 rounded-lg border border-line bg-surface-raised p-3"
                 >
-                  {/* A checkerboard makes transparency visible — the thing that
-                      matters most for a logo destined for an overlay. */}
-                  <div
-                    className="grid aspect-square place-items-center rounded-md p-4"
-                    style={{
-                      backgroundImage:
-                        'linear-gradient(45deg, #ffffff0d 25%, transparent 25%, transparent 75%, #ffffff0d 75%), linear-gradient(45deg, #ffffff0d 25%, transparent 25%, transparent 75%, #ffffff0d 75%)',
-                      backgroundSize: '16px 16px',
-                      backgroundPosition: '0 0, 8px 8px',
-                    }}
-                  >
+                  <Checkerboard className="grid aspect-square place-items-center p-4">
                     {/* eslint-disable-next-line @next/next/no-img-element -- local asset route */}
                     <img
                       src={`/api/assets/${logo.id}`}
                       alt=""
                       className="max-h-full max-w-full object-contain"
                     />
-                  </div>
+                  </Checkerboard>
 
                   <div className="flex items-center justify-between gap-2">
                     {isPrimary ? (

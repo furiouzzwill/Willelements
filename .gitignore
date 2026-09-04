@@ -43,3 +43,8 @@ next-env.d.ts
 
 # local database, assets and the token encryption key — yours, not the project's
 /data
+
+# Agent skills installed from skills-lock.json — 900+ vendored files, restored
+# with `npx skills experimental_install`. The lockfile is committed; these are not.
+/.agents
+/.claude/skills

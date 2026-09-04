@@ -128,6 +128,35 @@ const migrations: { name: string; sql: string }[] = [
       CREATE INDEX stream_events_type_idx ON stream_events(type);
     `,
   },
+  {
+    name: '002_render_jobs',
+    sql: `
+      CREATE TABLE render_jobs (
+        id TEXT PRIMARY KEY,
+        brand_id TEXT REFERENCES brands(id) ON DELETE SET NULL,
+        template_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'queued',
+        quality TEXT NOT NULL DEFAULT 'standard',
+        format TEXT NOT NULL DEFAULT 'mp4',
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        duration_ms INTEGER NOT NULL,
+        input TEXT NOT NULL DEFAULT '{}',
+        -- Relative to the data directory, so the folder stays portable.
+        project_dir TEXT NOT NULL,
+        progress INTEGER NOT NULL DEFAULT 0,
+        stage TEXT,
+        output_asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,
+        error TEXT,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        started_at TEXT,
+        completed_at TEXT
+      );
+      CREATE INDEX render_jobs_status_idx ON render_jobs(status);
+      CREATE INDEX render_jobs_created_idx ON render_jobs(created_at);
+    `,
+  },
 ]
 
 /**

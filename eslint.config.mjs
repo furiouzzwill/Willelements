@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Third-party, minified, and not ours to style. See vendor/gsap/README.md.
+    "vendor/**",
+    // Generated HyperFrames projects and everything else the app writes.
+    "data/**",
+    // Agent skills restored from skills-lock.json, not project source.
+    ".agents/**",
   ]),
 ]);
 

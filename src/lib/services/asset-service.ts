@@ -1,7 +1,8 @@
 import 'server-only'
 
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, unlink, writeFile } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
+import { copyFile, mkdir, open, stat, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { desc, eq } from 'drizzle-orm'
 
@@ -199,6 +200,98 @@ export async function saveAsset(input: SaveAssetInput): Promise<Asset> {
     .get()
 
   return row
+}
+
+export type SaveGeneratedAssetInput = {
+  /** Absolute path to a file this app produced. */
+  sourcePath: string
+  type: SaveAssetInput['type']
+  brandId?: string | null
+  prompt?: string | null
+  provider?: string | null
+  model?: string | null
+  width?: number | null
+  height?: number | null
+  durationMs?: number | null
+}
+
+/**
+ * Stores a file this app generated, by path rather than by bytes.
+ *
+ * Two things separate it from `saveAsset`:
+ *
+ *  - **No size cap.** The 25 MB limit protects the app from a file a person
+ *    picked; it makes no sense against a file the app just rendered itself. A
+ *    minute of high-quality 1080p is legitimately larger than that, and
+ *    rejecting it would be rejecting the feature.
+ *  - **Nothing is held in memory.** The hash and the copy both stream, because
+ *    a render output can be hundreds of megabytes and reading it into a buffer
+ *    to hash it would be the largest allocation in the process.
+ *
+ * The type is still sniffed from the file's own leading bytes. The renderer is
+ * trusted, but a truncated or zero-length output is exactly the failure worth
+ * catching here rather than in a browser source, live.
+ */
+export async function saveGeneratedAsset(input: SaveGeneratedAssetInput): Promise<Asset> {
+  const stats = await stat(input.sourcePath)
+  if (stats.size === 0) {
+    throw new AssetValidationError('The render produced an empty file.')
+  }
+
+  const head = await readHead(input.sourcePath)
+  const detected = detectType(head)
+  if (!detected) {
+    throw new AssetValidationError(
+      'The render produced a file this app does not recognise as video or audio.',
+    )
+  }
+
+  const digest = await hashFile(input.sourcePath)
+  const fileName = `${digest.slice(0, 32)}.${detected.extension}`
+  const absolutePath = path.join(/* turbopackIgnore: true */ ASSETS_DIR, fileName)
+
+  await mkdir(ASSETS_DIR, { recursive: true })
+  await copyFile(input.sourcePath, absolutePath)
+
+  return getDb()
+    .insert(assets)
+    .values({
+      id: randomUUID(),
+      brandId: input.brandId ?? null,
+      type: input.type,
+      source: 'generated',
+      filePath: fileName,
+      mimeType: detected.mime,
+      fileSize: stats.size,
+      width: input.width ?? null,
+      height: input.height ?? null,
+      durationMs: input.durationMs ?? null,
+      prompt: input.prompt ?? null,
+      provider: input.provider ?? null,
+      model: input.model ?? null,
+    })
+    .returning()
+    .get()
+}
+
+/** Enough leading bytes for every signature in the table above. */
+async function readHead(filePath: string): Promise<Uint8Array> {
+  const handle = await open(filePath, 'r')
+  try {
+    const buffer = new Uint8Array(64)
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0)
+    return buffer.subarray(0, bytesRead)
+  } finally {
+    await handle.close()
+  }
+}
+
+async function hashFile(filePath: string): Promise<string> {
+  const hash = createHash('sha256')
+  for await (const chunk of createReadStream(filePath)) {
+    hash.update(chunk as Buffer)
+  }
+  return hash.digest('hex')
 }
 
 export function getAsset(id: string): Asset | null {

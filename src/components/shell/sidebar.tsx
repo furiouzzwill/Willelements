@@ -79,7 +79,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <p className="shrink-0 border-t border-line px-5 py-3 text-xs text-ink-subtle">
-        Phase {CURRENT_PHASE} · Overlay editor
+        Phase {CURRENT_PHASE} · Motion graphics
       </p>
     </nav>
   )

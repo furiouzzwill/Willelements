@@ -7,7 +7,7 @@
  * rather than a dead link, so the app never lies about what works yet.
  */
 
-export const CURRENT_PHASE = 8
+export const CURRENT_PHASE = 9
 
 export type NavItem = {
   label: string
@@ -63,21 +63,21 @@ export const navigation: NavSection[] = [
       { label: 'Alerts', href: '/stream/alerts', phase: 6 },
       // The editor lives on an overlay rather than as a standalone page —
       // there is nothing to edit without knowing which overlay you mean.
-      { label: 'Goals', href: '/stream/goals', phase: 10 },
-      { label: 'Labels', href: '/stream/labels', phase: 10 },
-      { label: 'Scenes', href: '/stream/scenes', phase: 11 },
+      { label: 'Goals', href: '/stream/goals', phase: 11 },
+      { label: 'Labels', href: '/stream/labels', phase: 11 },
+      { label: 'Scenes', href: '/stream/scenes', phase: 12 },
     ],
   },
   {
     label: 'Create',
     icon: 'sparkle',
     items: [
-      { label: 'AI Create', href: '/create', phase: 9 },
-      { label: 'Stream Packages', href: '/create/packages', phase: 9 },
-      { label: 'Graphics', href: '/create/graphics', phase: 9 },
+      { label: 'AI Create', href: '/create', phase: 10 },
+      { label: 'Stream Packages', href: '/create/packages', phase: 10 },
+      { label: 'Graphics', href: '/create/graphics', phase: 10 },
       { label: 'Animations', href: '/create/animations', phase: 9 },
-      { label: 'Social Content', href: '/create/social', phase: 9 },
-      { label: 'Templates', href: '/create/templates', phase: 9 },
+      { label: 'Social Content', href: '/create/social', phase: 10 },
+      { label: 'Templates', href: '/create/templates', phase: 10 },
     ],
   },
   {
@@ -97,12 +97,12 @@ export const navigation: NavSection[] = [
     label: 'Analytics',
     icon: 'analytics',
     items: [
-      { label: 'Overview', href: '/analytics', phase: 10 },
-      { label: 'Twitch', href: '/analytics/twitch', phase: 10 },
-      { label: 'Streams', href: '/analytics/streams', phase: 10 },
-      { label: 'Audience', href: '/analytics/audience', phase: 10 },
-      { label: 'YouTube', href: '/analytics/youtube', phase: 11 },
-      { label: 'Growth', href: '/analytics/growth', phase: 11 },
+      { label: 'Overview', href: '/analytics', phase: 11 },
+      { label: 'Twitch', href: '/analytics/twitch', phase: 11 },
+      { label: 'Streams', href: '/analytics/streams', phase: 11 },
+      { label: 'Audience', href: '/analytics/audience', phase: 11 },
+      { label: 'YouTube', href: '/analytics/youtube', phase: 12 },
+      { label: 'Growth', href: '/analytics/growth', phase: 12 },
     ],
   },
   {
@@ -114,10 +114,10 @@ export const navigation: NavSection[] = [
     label: 'Community',
     icon: 'community',
     items: [
-      { label: 'Chatbot', href: '/community/chatbot', phase: 11 },
-      { label: 'Commands', href: '/community/commands', phase: 11 },
-      { label: 'Timers', href: '/community/timers', phase: 11 },
-      { label: 'Giveaways', href: '/community/giveaways', phase: 11 },
+      { label: 'Chatbot', href: '/community/chatbot', phase: 12 },
+      { label: 'Commands', href: '/community/commands', phase: 12 },
+      { label: 'Timers', href: '/community/timers', phase: 12 },
+      { label: 'Giveaways', href: '/community/giveaways', phase: 12 },
     ],
   },
   {
@@ -125,8 +125,8 @@ export const navigation: NavSection[] = [
     icon: 'integrations',
     items: [
       { label: 'Twitch', href: '/integrations/twitch', phase: 4 },
-      { label: 'OBS', href: '/integrations/obs', phase: 10 },
-      { label: 'YouTube', href: '/integrations/youtube', phase: 10 },
+      { label: 'OBS', href: '/integrations/obs', phase: 11 },
+      { label: 'YouTube', href: '/integrations/youtube', phase: 11 },
     ],
   },
   {
@@ -137,7 +137,7 @@ export const navigation: NavSection[] = [
       // here — two navigation entries pointing at one page is a dead end for
       // anyone trying to work out where a setting actually lives.
       { label: 'Storage', href: '/settings', phase: 1 },
-      { label: 'Notifications', href: '/settings/notifications', phase: 9 },
+      { label: 'Notifications', href: '/settings/notifications', phase: 10 },
     ],
   },
 ]

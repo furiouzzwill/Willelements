@@ -13,7 +13,7 @@ single folder you own.
 
 ## Current status
 
-**Phase 8 — Overlay editor. Complete, pending a live Twitch connection.**
+**Phase 9 — HyperFrames motion graphics. Complete, pending a live Twitch connection.**
 
 Working today:
 
@@ -42,16 +42,19 @@ Working today:
 - **Activity feed** with live connection status
 - **Overlay editor** — drag and resize eight widget types onto your canvas,
   layered and configurable, rendered by the same code that runs in OBS
+- **Motion graphics** — an animated logo, a seamlessly looping scene card and a
+  transparent lower third, generated from your Brand DNA and rendered to video
+  in the background with HyperFrames, then saved to your asset library
 - One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- 181 tests, no test dependencies
+- 238 tests, no test dependencies
 
 Not working yet — and not pretended to:
 
-- No AI generation (Phase 9 / 10) — HyperFrames is blocked, see ARCHITECTURE R1
-- No analytics pages yet (Phase 10)
-- No AI generation (Phase 8 / 9)
+- No AI image generation (Phase 10) — the only part that will ever cost money
+- No analytics pages yet (Phase 11)
+- No YouTube (Phase 11), no chatbot or community tools (Phase 12)
 
 The dashboard shows **empty states rather than sample metrics**. Displaying a
 number no provider actually gave us is treated as a bug.
@@ -94,7 +97,8 @@ Everything lives in one directory:
 ```
 data/
 ├── app.db          SQLite database
-└── assets/         Uploaded and generated files
+├── assets/         Uploaded and generated files
+└── renders/        Generated compositions, one folder per render
 ```
 
 - **Back up** by copying that folder.
@@ -109,8 +113,9 @@ the repo.
 
 ## What it costs
 
-Nothing, for everything through Phase 7 — a working branded follower alert in
-OBS driven by real Twitch events.
+Nothing, for everything through Phase 9 — a working branded follower alert in
+OBS driven by real Twitch events, and motion graphics rendered on your own
+machine.
 
 | | Cost |
 | --- | --- |
@@ -118,7 +123,8 @@ OBS driven by real Twitch events.
 | Twitch API + EventSub | Free |
 | OBS | Free |
 | Running the app | Free |
-| OpenAI image generation (Phase 9) | Pay per image — optional, and far away |
+| HyperFrames rendering | Free — it runs locally, on your CPU |
+| OpenAI image generation (Phase 10) | Pay per image — optional, and far away |
 
 ---
 
@@ -136,15 +142,16 @@ src/
 ├── config/navigation.ts   Product information architecture
 ├── lib/
 │   ├── db/                SQLite connection, schema, migrations, JSON helpers
+│   ├── hyperframes/       Brand DNA → composition templates, and the renderer
+│   ├── providers/         Twitch OAuth, Helix and EventSub
 │   ├── schemas/           Zod schemas for every JSON column
-│   ├── services/          Brand, asset, backup, setup — feature logic
+│   ├── services/          Brand, asset, alert, overlay, render — feature logic
 │   ├── env.ts             Optional configuration
 │   └── utils.ts
 └── ...
 tests/                     node:test suites
+vendor/gsap/               Vendored GSAP for generated compositions
 ```
-
-Later phases add `src/app/overlay/` (the OBS browser sources) and more services.
 
 ---
 
@@ -153,7 +160,7 @@ Later phases add `src/app/overlay/` (the OBS browser sources) and more services.
 | Document | Contents |
 | --- | --- |
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System design and architecture review |
-| [`ROADMAP.md`](./ROADMAP.md) | Phases 1–10 with an implementation checklist |
+| [`ROADMAP.md`](./ROADMAP.md) | Phases 1–12 with an implementation checklist |
 | [`docs/local-setup.md`](./docs/local-setup.md) | Running it, backing it up, OBS |
 | [`docs/brand-dna.md`](./docs/brand-dna.md) | The creator identity model |
 | [`docs/overlay-system.md`](./docs/overlay-system.md) | Overlays, widgets, the OBS runtime |

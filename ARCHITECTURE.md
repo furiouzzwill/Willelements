@@ -188,6 +188,20 @@ Locally, rendering is a background job on the same machine — it does not block
 the UI, and it does not need a worker service. **Never send a live event through
 a render job.**
 
+Implemented in Phase 9. A render is a row in `render_jobs` plus a generated
+HyperFrames project under `data/renders/<job>/`: an `index.html`, a vendored
+GSAP, and the brand's logo. A single-worker promise chain runs one at a time —
+this is the same machine that encodes the stream — spawning the CLI and parsing
+its progress output into the row. The finished file is ingested as an asset, so
+it is backed up with everything else; the project directory is not, because it
+is reproducible and its value is diagnostic.
+
+Compositions are **generated, not authored**: `toVisualIdentity` turns Brand DNA
+into durations, easings, travel distances and a contrast-corrected palette, and
+each template is a pure function from that identity to an HTML string. That
+purity is the point — the exact file the renderer will open can be asserted in a
+unit test, rather than only discovered to be wrong after a two-minute render.
+
 ---
 
 ## 8. Services
@@ -218,20 +232,25 @@ no return.
 | Twitch events | ✅ | Implemented — EventSub **WebSocket**, no public URL needed |
 | OBS browser sources | ✅ | Lean route, opaque token, SSE |
 | Brand DNA | ✅ | JSON columns on `brands` |
-| HyperFrames | ⚠️ | Not installed — risk R1 |
+| HyperFrames | ✅ | Installed and proven — three templates render end to end |
 | OpenAI images | ✅ | Server-side, behind a service |
 | YouTube later | ✅ | Same adapter shape as Twitch |
 
 ### Risks
 
-**R1 — HyperFrames is not installed.** *Blocking for Phase 8.* No skill, no CLI.
-A public npm package `hyperframes` (0.8.27) matches the described workflow, but
-nothing here confirms it is the intended one. Phase 8 does not start until the
-correct tooling is installed and its own documentation read as the source of
-truth.
+**R1 — HyperFrames tooling.** *Resolved in Phase 9.* The official skills are
+installed from `heygen-com/hyperframes` and pinned in `skills-lock.json`; the
+CLI is `hyperframes@0.8.27`, invoked as a subprocess. The skills' own
+documentation was read first and is the source of truth for the composition
+contract. What remains is not a risk but a dependency, and the app treats it as
+one: rendering needs the CLI, FFmpeg and a headless Chrome, none of which ship
+with the app, so the animations page probes for them and says plainly what is
+missing rather than offering a button that fails.
 
-**R2 — FFmpeg is not installed.** *Blocking for Phase 8 rendering.* Needs
-installing on whatever machine runs the app.
+**R2 — FFmpeg is not installed.** *Resolved in Phase 9, with a caveat.* FFmpeg
+is present here and the toolchain probe confirms it. It is still a per-machine
+install: `npm run dev` alone will not render video on a machine without it. The
+probe is what keeps that from being a mystery.
 
 **R3 — The app must be running for alerts to work.** *Mitigated in Phase 6.* If
 it is closed or crashes mid-stream, alerts stop — true of every local streaming

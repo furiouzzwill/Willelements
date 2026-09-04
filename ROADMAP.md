@@ -3,7 +3,7 @@
 Each phase is focused, testable and shippable. A phase is not complete until
 typecheck, lint and build all pass and its exit criteria are demonstrably met.
 
-**Current position: Phase 8 complete — pending a live Twitch connection.**
+**Current position: Phase 9 complete — pending a live Twitch connection.**
 
 ---
 
@@ -25,8 +25,8 @@ expanding into anything else.
 ## Phase 0 — Discovery ✅
 
 - [x] Node 22.22.2, npm 10.9.7, git 2.43.0
-- [x] **FFmpeg: not installed** (risk R2)
-- [x] **HyperFrames skill and CLI: not available** (risk R1)
+- [x] **FFmpeg: not installed** (risk R2 — resolved in Phase 9)
+- [x] **HyperFrames skill and CLI: not available** (risk R1 — resolved in Phase 9)
 - [x] No Docker daemon; no project environment variables
 - [x] Findings recorded in `ARCHITECTURE.md` §9
 
@@ -270,9 +270,9 @@ passing test genuinely exercises the real path rather than a shortcut past it.
 
 ## Phase 8 — Overlay editor and widgets ✅
 
-HyperFrames was the original Phase 8 but is **still blocked** — no skill, no
-CLI, no FFmpeg (risks R1 and R2, re-checked). The overlay editor was unblocked
-and worth more, so it took this slot; HyperFrames moves to Phase 9.
+HyperFrames was the original Phase 8, but at the time it was blocked — no skill,
+no CLI, no FFmpeg. The overlay editor was unblocked and worth more, so it took
+this slot; HyperFrames moved to Phase 9 and shipped there.
 
 - [x] Eight widget types: alert box, text, image, latest follower, latest
       subscriber, recent events, follower goal, clock
@@ -309,22 +309,66 @@ Three things this phase found:
 
 ---
 
-## Phase 9 — HyperFrames
+## Phase 9 — HyperFrames ✅
 
-> **Still blocked** as of this phase: no HyperFrames skill, no CLI, and no
-> FFmpeg (risks R1 and R2).
+Unblocked: the official skills are installed from `heygen-com/hyperframes` and
+pinned in `skills-lock.json`, FFmpeg is present, and the CLI fetches its own
+headless Chrome. Risks R1 and R2 are resolved. The skills' own documentation was
+read first and drove the composition contract.
 
-- [ ] Install and verify the tooling; read it as the source of truth
-- [ ] Convert Brand DNA into a HyperFrames visual identity
-- [ ] Animated logo as the first composition
-- [ ] Background render jobs with status in the UI
-- [ ] Rendered output stored in `data/assets`
+- [x] Brand DNA → a visual identity: durations, easings, travel, stagger,
+      typography and a contrast-corrected palette, in **one** module that every
+      template reads instead of interpreting the DNA itself
+- [x] **Animated logo** as the first composition, plus a looping scene card and
+      a transparent lower third
+- [x] Templates are **pure functions** from identity to HTML string, so the
+      exact file the renderer will open is asserted in unit tests rather than
+      discovered to be wrong after a two-minute render
+- [x] GSAP **vendored**, never a CDN — with a test that fails on any URL in a
+      generated composition
+- [x] Background render jobs: `render_jobs`, a single-worker queue, the CLI's own
+      progress parsed into the row, live status in the UI without blocking it
+- [x] Rendered output stored in `data/assets`, projects kept under `data/renders`
+- [x] Toolchain probe that says exactly what is missing instead of offering a
+      Render button that fails
+- [x] Interrupted renders closed out at boot
+- [x] Byte-range support on the asset route, so a rendered video can be scrubbed
 
-**Do not** move live alerts onto pre-rendered video.
+**Exit met**, verified by driving the real UI in a browser on a clean data
+folder. Rendered all three compositions, watched progress move without a reload,
+and checked what came out:
+
+- The lower third decodes at 1920×1080 with **genuine transparency** — alpha 0
+  across the frame, 239 inside the bar.
+- The scene card is exactly 240 frames at 30fps, and the seam holds: the last
+  frame differs from the first by about as much as any two adjacent frames
+  (0.37 against 0.28 mean absolute difference), so the loop continues rather
+  than jumps.
+- The asset route answers a range request with a 206 and a correct
+  `Content-Range`, so the scrubber works.
+- Zero page errors throughout.
+
+Live alerts were **not** moved onto pre-rendered video, and the animations page
+says why in as many words.
+
+Things worth recording from this phase:
+
+- The first render failed on a navigation timeout because the composition loaded
+  GSAP from a CDN. Vendoring it fixed it and removed a network dependency from
+  every future render.
+- `ensureContrast` replaced a maximise-contrast rule that was quietly swapping a
+  brand's considered near-black ink for pure black on every light palette.
+- Text on the mark sits on a two-colour gradient, so its contrast is now chosen
+  against **both** ends rather than the one the gradient starts at.
+- `pix_fmt` reads `yuv420p` for a transparent VP9 WebM — the alpha rides as
+  Matroska side data, not in the pixel format. Judging transparency by `ffprobe`
+  alone would have condemned a file that is genuinely transparent.
+- The asset route ignored `Range`, which nothing noticed until there was a video
+  to scrub.
 
 ---
 
-## Phase 9 — OpenAI images
+## Phase 10 — OpenAI images
 
 > Verify the current image API, model names and sizes first.
 > **This is the only part of the project that costs money.**
@@ -337,7 +381,7 @@ Three things this phase found:
 
 ---
 
-## Phase 10 — YouTube
+## Phase 11 — YouTube
 
 > Verify current Google/YouTube API scopes and quotas first.
 
@@ -349,7 +393,7 @@ Three things this phase found:
 
 ## Beyond
 
-**Phase 11 — Community:** chatbot, commands, timers, giveaways.
+**Phase 12 — Community:** chatbot, commands, timers, giveaways.
 Architected for, not built until overlays and events are solid.
 
 Monetization is out of scope — this is a personal tool, not a service.

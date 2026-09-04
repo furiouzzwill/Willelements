@@ -55,6 +55,7 @@ describe('schema and migrations agree', () => {
       'connected_accounts',
       'overlay_widgets',
       'overlays',
+      'render_jobs',
       'stream_events',
     ])
   })

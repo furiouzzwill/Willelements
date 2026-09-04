@@ -18,7 +18,8 @@ import { defaultBrandDna } from '@/lib/schemas/brand'
  *
  *   data/
  *   ├── app.db          SQLite database
- *   └── assets/         Uploaded and generated files
+ *   ├── assets/         Uploaded and generated files
+ *   └── renders/        Generated compositions, one folder per render
  *
  * Override the location with WILLELEMENTS_DATA_DIR.
  */
@@ -28,6 +29,15 @@ export const DATA_DIR = process.env.WILLELEMENTS_DATA_DIR
   : path.join(process.cwd(), 'data')
 
 export const ASSETS_DIR = path.join(DATA_DIR, 'assets')
+
+/**
+ * Generated HyperFrames projects, one directory per render.
+ *
+ * Working files rather than data: the finished video is stored as an asset, and
+ * this is the HTML that produced it. Kept for diagnosis, excluded from backups,
+ * safe to delete.
+ */
+export const RENDERS_DIR = path.join(DATA_DIR, 'renders')
 
 export const DB_PATH = path.join(DATA_DIR, 'app.db')
 

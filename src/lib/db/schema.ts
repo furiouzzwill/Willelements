@@ -203,6 +203,57 @@ export const streamEvents = sqliteTable(
   ],
 )
 
+/**
+ * One HyperFrames render, from queued to a file on disk.
+ *
+ * Rendering is minutes of CPU, so it never happens inside a request. A row here
+ * is the whole of what the UI knows about a render in flight, and the only
+ * thing that survives the process restarting mid-render.
+ */
+export const renderJobs = sqliteTable(
+  'render_jobs',
+  {
+    id: id(),
+    brandId: text('brand_id').references(() => brands.id, { onDelete: 'set null' }),
+    /** Must match a template in the composition registry. */
+    templateId: text('template_id').notNull(),
+    name: text('name').notNull(),
+    /** queued | processing | completed | failed | cancelled */
+    status: text('status').notNull().default('queued'),
+    /** draft | standard | high */
+    quality: text('quality').notNull().default('standard'),
+    /** mp4 | webm — webm is what carries transparency. */
+    format: text('format').notNull().default('mp4'),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    durationMs: integer('duration_ms').notNull(),
+    /** JSON: the headline and subhead this render was made with. */
+    input: text('input', { mode: 'json' }).notNull().default(sql`'{}'`),
+    /**
+     * The generated project, relative to the data directory.
+     *
+     * Kept after the render finishes. When a video comes out wrong, the HTML
+     * that produced it is the only thing that explains why, and it is a few
+     * kilobytes. Backups deliberately exclude it — the finished video is an
+     * asset and is backed up; the working directory is reproducible.
+     */
+    projectDir: text('project_dir').notNull(),
+    /** 0-100, parsed from the CLI's own progress output. */
+    progress: integer('progress').notNull().default(0),
+    /** What the renderer says it is doing, shown as-is. */
+    stage: text('stage'),
+    outputAssetId: text('output_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+    error: text('error'),
+    createdAt: timestamp('created_at'),
+    startedAt: text('started_at'),
+    completedAt: text('completed_at'),
+  },
+  (table) => [
+    index('render_jobs_status_idx').on(table.status),
+    index('render_jobs_created_idx').on(table.createdAt),
+  ],
+)
+
 export type Brand = typeof brands.$inferSelect
 export type Asset = typeof assets.$inferSelect
 export type Overlay = typeof overlays.$inferSelect
@@ -210,3 +261,4 @@ export type OverlayWidget = typeof overlayWidgets.$inferSelect
 export type AlertConfig = typeof alertConfigs.$inferSelect
 export type ConnectedAccount = typeof connectedAccounts.$inferSelect
 export type StreamEvent = typeof streamEvents.$inferSelect
+export type RenderJob = typeof renderJobs.$inferSelect
