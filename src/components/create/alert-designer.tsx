@@ -16,7 +16,7 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import { Label } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
 import type { BrandDna } from '@/lib/schemas/brand'
-import type { AlertSpec } from '@/lib/schemas/alert'
+import { DEFAULT_TEMPLATES, type AlertSpec } from '@/lib/schemas/alert'
 import { EVENT_LABELS, type EventType, type NormalizedEvent } from '@/lib/schemas/event'
 
 /**
@@ -79,6 +79,16 @@ export function AlertDesigner({
   const [description, setDescription] = useState('')
   const [spec, setSpec] = useState<AlertSpec | null>(null)
   const [replay, setReplay] = useState(0)
+
+  // Replay on a loop while a design is on screen. Entrance and exit are where
+  // most of the difference between two designs lives, and they are over in
+  // under a second — a still frame of a glitch and a still frame of a fade are
+  // the same picture, which is what made every design look identical.
+  useEffect(() => {
+    if (!spec) return
+    const timer = setInterval(() => setReplay((count) => count + 1), 3200)
+    return () => clearInterval(timer)
+  }, [spec])
 
   // Apply once per result, so a re-render cannot re-apply a design over an
   // edit made since.
@@ -171,7 +181,7 @@ export function AlertDesigner({
               key={replay}
               event={samples[eventType]}
               spec={spec}
-              messageTemplate="{{username}}"
+              messageTemplate={DEFAULT_TEMPLATES[eventType] ?? "{{username}}"}
               dna={dna}
               logoUrl={logoUrl}
             />
@@ -193,7 +203,13 @@ export function AlertDesigner({
               </div>
               <div className="flex justify-between gap-2">
                 <dt>Logo</dt>
-                <dd className="text-ink-muted">{spec.showLogo ? 'shown' : 'hidden'}</dd>
+                <dd className="text-ink-muted">
+                  {spec.showLogo
+                    ? logoUrl
+                      ? 'shown'
+                      : 'asked for, none set'
+                    : 'hidden'}
+                </dd>
               </div>
               <div className="flex justify-between gap-2">
                 <dt>Label</dt>
@@ -201,7 +217,26 @@ export function AlertDesigner({
                   {label && 'value' in label ? label.value : '—'}
                 </dd>
               </div>
+              {/* Shown as text because two designs can differ in ways a still
+                  frame cannot: which parts are present, and how loud it is. */}
+              <div className="flex justify-between gap-2">
+                <dt>Parts</dt>
+                <dd className="truncate text-ink-muted">
+                  {spec.elements.map((element) => element.type).join(', ')}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt>Volume</dt>
+                <dd className="text-ink-muted">{Math.round(spec.volume * 100)}%</dd>
+              </div>
             </dl>
+
+            {spec.showLogo && !logoUrl ? (
+              <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+                This design uses your logo, but no logo is set — so it will not appear.
+                Upload one in Brand → Logos.
+              </p>
+            ) : null}
 
             <div className="flex flex-wrap items-center gap-2">
               <button
