@@ -195,3 +195,36 @@ export async function designAlertAction(
     }
   }
 }
+
+/**
+ * Saves a designed spec straight onto an alert.
+ *
+ * The in-editor panel hands its result to the surrounding form and saves
+ * nothing, because that form is right there to adjust first. The AI Create
+ * studio has no such form, so it needs a way to commit a design directly —
+ * still only when asked, never as a side effect of generating one.
+ */
+export async function applyDesignedSpec(
+  _prev: AlertFormState,
+  formData: FormData,
+): Promise<AlertFormState> {
+  const type = eventTypeSchema.safeParse(formData.get('eventType'))
+  if (!type.success) return { error: 'Unknown alert type.' }
+
+  let raw: unknown
+  try {
+    raw = JSON.parse(String(formData.get('spec') ?? ''))
+  } catch {
+    return { error: 'That design could not be read.' }
+  }
+
+  // Parsed again here rather than trusted from the client. It was validated
+  // when generated, but it has been through the browser since.
+  const parsed = alertSpec.safeParse(raw)
+  if (!parsed.success) return { error: 'That design is not in a shape this app can render.' }
+
+  updateAlertConfig(type.data, { spec: parsed.data })
+  revalidate(type.data)
+
+  return { message: 'Saved. It will play the next time that event fires.' }
+}

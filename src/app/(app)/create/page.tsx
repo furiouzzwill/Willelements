@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { generateOne } from '@/app/(app)/create/actions'
+import { AlertDesigner } from '@/components/create/alert-designer'
 import { GenerateForm } from '@/components/create/generate-form'
 import { SpendPanel } from '@/components/create/spend-panel'
 import { PageHeader } from '@/components/shell/page-header'
@@ -11,6 +12,9 @@ import { formatCost } from '@/lib/providers/openai/pricing'
 import { getDefaultBrand } from '@/lib/services/brand-service'
 import { hasApiKey, listGeneratedImages, spendSummary } from '@/lib/services/image-service'
 import { SUBJECTS } from '@/lib/services/image-prompt'
+import { hasApiKey as hasTextKey } from '@/lib/providers/openai/text'
+import { EVENT_TYPES, type EventType, type NormalizedEvent } from '@/lib/schemas/event'
+import { buildTestEvent } from '@/lib/services/test-event-service'
 
 export const metadata: Metadata = { title: 'AI Create' }
 
@@ -26,6 +30,12 @@ export default function CreatePage() {
   const keyPresent = hasApiKey()
   const spend = spendSummary()
   const recent = listGeneratedImages(12)
+
+  // One realistic sample per event type, built server-side so the designer's
+  // preview shows a plausible name and amount rather than placeholder text.
+  const samples = Object.fromEntries(
+    EVENT_TYPES.map((type) => [type, buildTestEvent(type)]),
+  ) as Record<EventType, NormalizedEvent>
 
   return (
     <>
@@ -79,6 +89,19 @@ export default function CreatePage() {
       ) : (
         <>
           <SpendPanel spend={spend} />
+
+          <Panel>
+            <PanelHeader
+              title="Design an alert"
+              description="Say what you want and it plays here — nothing saves until you press Save"
+            />
+            <AlertDesigner
+              dna={brand.dna}
+              logoUrl={brand.logoAssetId ? `/api/assets/${brand.logoAssetId}` : null}
+              samples={samples}
+              enabled={hasTextKey()}
+            />
+          </Panel>
 
           {SUBJECTS.map((subject) => (
             <Panel key={subject.id}>
