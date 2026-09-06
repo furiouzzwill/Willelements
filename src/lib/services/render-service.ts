@@ -178,7 +178,12 @@ export function createRenderJob(request: RenderRequest): RenderJobView {
       id,
       brandId: brand.id,
       templateId: template.id,
-      name: `${template.name} — ${input.headline}`.slice(0, 120),
+      // A template with no text fields has no headline to append, and
+      // "Alert backdrop — " with a dangling dash reads as a truncation bug.
+      name: (input.headline.trim()
+        ? `${template.name} — ${input.headline.trim()}`
+        : template.name
+      ).slice(0, 120),
       status: 'queued',
       quality: parsed.quality,
       format: template.format,

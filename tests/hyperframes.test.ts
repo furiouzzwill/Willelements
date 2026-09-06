@@ -274,13 +274,27 @@ describe('composition templates', () => {
       assert.equal(html.includes('[object Object]'), false)
     })
 
-    test(`${template.id} escapes brand text`, () => {
+    test(`${template.id} never lets input reach the markup unescaped`, () => {
       const { html } = build(template.id, {
         headline: `Rock & "Roll" <script>`,
         subhead: `it's live`,
       })
 
+      // True of every template, textless or not: nothing typed may become
+      // markup.
       assert.equal(html.includes('<script>Rock'), false)
+
+      if (template.headline === null && template.subhead === null) {
+        // A template that declares no text fields must carry no supplied text
+        // at all, escaped or otherwise. alert-sting depends on this: it is one
+        // video reused for every viewer, so a name baked into it would be the
+        // wrong name for everyone but the first.
+        assert.equal(html.includes('Rock'), false)
+        assert.equal(html.includes('Roll'), false)
+        assert.equal(html.includes('live'), false)
+        return
+      }
+
       assert.match(html, /Rock &amp; &quot;Roll&quot; &lt;script&gt;/)
       assert.match(html, /it&#39;s live/)
     })
@@ -292,6 +306,44 @@ describe('composition templates', () => {
       assert.ok(durationSeconds <= 30)
     })
   }
+
+  test('the alert backdrop keeps its sparks outside the ring', () => {
+    const sting = findTemplate('alert-sting')
+    assert.ok(sting)
+
+    // The alert's username is drawn as live DOM in the middle of the frame.
+    // Anything opaque there competes with the words it is supposed to sit
+    // behind. Sparks were first offset by motion.travel — tens of pixels — and
+    // landed in the centre of a 1920-wide canvas.
+    for (const energy of ['low', 'medium', 'high'] as const) {
+      const identity = toVisualIdentity(
+        brandDna.parse({ motionStyle: { energy, speed: 'medium', style: ['smooth'] } }),
+      )
+
+      const html = sting.build({
+        identity,
+        brandName: 'Test',
+        input: { headline: '', subhead: '' },
+        logoSrc: null,
+        width: sting.width,
+        height: sting.height,
+        durationSeconds: sting.duration(identity),
+      })
+
+      const offsets = [...html.matchAll(/--dx:(-?\d+)px; --dy:(-?\d+)px;/g)].map(
+        (match) => ({ x: Number(match[1]), y: Number(match[2]) }),
+      )
+
+      assert.equal(offsets.length, 4, `expected four sparks at ${energy} energy`)
+
+      for (const offset of offsets) {
+        assert.ok(
+          Math.abs(offset.x) >= 540,
+          `spark at x=${offset.x} is inside the ring at ${energy} energy`,
+        )
+      }
+    }
+  })
 
   test('a slower brand gets a longer sting than a faster one', () => {
     const sting = findTemplate('logo-sting')

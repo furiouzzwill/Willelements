@@ -359,6 +359,29 @@ and checked what came out:
 Live alerts were **not** moved onto pre-rendered video, and the animations page
 says why in as many words.
 
+**Added later: an `alert-sting` composition.** A transparent backdrop that plays
+*behind* a live alert — rendered once, reused for every event, with the username
+staying live DOM on top. That keeps the rule intact (no event ever goes through
+a render job) while giving alerts real motion graphics. It is the only template
+with no text fields at all, and a test enforces that: one video is reused for
+every viewer, so a name baked into it would be the wrong name for everyone but
+the first.
+
+Two things were only found by rendering it and looking:
+
+- Sparks were offset by `motion.travel` — tens of pixels — and landed in the
+  middle of a 1920-wide frame, on top of the alert's own text. They are anchored
+  to the ring's geometry now, and a test checks they stay outside it at every
+  brand energy.
+- The first version left the centre genuinely empty, on the theory that a
+  backdrop should not compete with the words. Over dark gameplay that was
+  invisible, and white text on unknown footage has no guaranteed contrast. The
+  middle now carries a dark plate the ring frames — the same reasoning the
+  banner alert layout already used.
+
+Still to do: choosing a rendered backdrop on an alert. The composition exists
+and renders; attaching one to an alert config is the next step.
+
 Things worth recording from this phase:
 
 - The first render failed on a navigation timeout because the composition loaded

@@ -1,3 +1,4 @@
+import { alertSting } from '@/lib/hyperframes/templates/alert-sting'
 import { logoSting } from '@/lib/hyperframes/templates/logo-sting'
 import { lowerThird } from '@/lib/hyperframes/templates/lower-third'
 import { sceneCard } from '@/lib/hyperframes/templates/scene-card'
@@ -9,7 +10,12 @@ import type { CompositionTemplate } from '@/lib/hyperframes/templates/types'
  * Order is the order they appear in the UI: the animated logo first, because it
  * is the one asset every brand needs and the one that proves the pipeline.
  */
-export const COMPOSITION_TEMPLATES: CompositionTemplate[] = [logoSting, sceneCard, lowerThird]
+export const COMPOSITION_TEMPLATES: CompositionTemplate[] = [
+  logoSting,
+  sceneCard,
+  lowerThird,
+  alertSting,
+]
 
 export const TEMPLATE_IDS = COMPOSITION_TEMPLATES.map((template) => template.id)
 
