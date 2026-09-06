@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 
 import { designAlertAction, type DesignFormState } from '@/app/(app)/stream/alerts/actions'
@@ -49,6 +49,11 @@ export function DesignPanel({
 }) {
   const [state, action] = useActionState<DesignFormState, FormData>(designAlertAction, {})
 
+  // The examples were rendered as pills and did nothing, which is worse than
+  // not showing them: anything shaped like a button is a button as far as the
+  // person reading it is concerned. Controlled so clicking one fills the box.
+  const [description, setDescription] = useState('')
+
   // Apply once per result. Without the guard, every re-render of the parent
   // would re-apply the same spec and stamp over edits made since.
   const applied = useRef<unknown>(null)
@@ -70,6 +75,8 @@ export function DesignPanel({
           name="description"
           rows={2}
           maxLength={600}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
           placeholder="e.g. loud and glitchy, big name, no logo"
           className="w-full rounded-lg border border-line bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
         />
@@ -81,11 +88,14 @@ export function DesignPanel({
 
       <ul className="flex flex-wrap gap-1.5">
         {EXAMPLES.map((example) => (
-          <li
-            key={example}
-            className="rounded-md bg-surface-raised px-2 py-1 text-xs text-ink-subtle"
-          >
-            {example}
+          <li key={example}>
+            <button
+              type="button"
+              onClick={() => setDescription(example)}
+              className="rounded-md bg-surface-raised px-2 py-1 text-left text-xs text-ink-subtle transition-colors hover:bg-accent-soft hover:text-ink focus:border-accent focus:outline-none"
+            >
+              {example}
+            </button>
           </li>
         ))}
       </ul>
