@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useCallback, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 
 import {
@@ -14,6 +14,7 @@ import { CanvasPreview } from '@/components/alerts/canvas-preview'
 import { Button } from '@/components/ui/button'
 import { ChoiceGroup } from '@/components/ui/choice-group'
 import { Field, Input, Label } from '@/components/ui/field'
+import { DesignPanel } from '@/app/(app)/stream/alerts/[type]/design-panel'
 import { Panel, PanelHeader } from '@/components/ui/panel'
 import {
   ENTRANCE_ANIMATIONS,
@@ -59,6 +60,7 @@ export function AlertEditor({
   logoUrl,
   sampleEvent,
   soundUrl,
+  aiEnabled,
 }: {
   eventType: EventType
   initial: {
@@ -72,6 +74,8 @@ export function AlertEditor({
   logoUrl: string | null
   sampleEvent: NormalizedEvent
   soundUrl: string | null
+  /** False when there is no API key, so the panel says so instead of failing. */
+  aiEnabled: boolean
 }) {
   const [state, action] = useActionState<AlertFormState, FormData>(saveAlertSettings, {})
   const [soundState, soundAction] = useActionState<AlertFormState, FormData>(
@@ -90,6 +94,51 @@ export function AlertEditor({
   })
   const [replay, setReplay] = useState(0)
 
+  // The form is uncontrolled — fields carry defaultValue and the preview is
+  // synced on change. A generated design therefore has to write into the DOM
+  // fields themselves, then push the same values into preview state, or the
+  // two would disagree until the next keystroke.
+  const formRef = useRef<HTMLFormElement>(null)
+
+  const applyDesign = useCallback((spec: AlertSpec) => {
+    const form = formRef.current
+    if (!form) return
+
+    const set = (name: string, value: string) => {
+      const field = form.elements.namedItem(name)
+      if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) {
+        field.value = value
+      }
+    }
+
+    const designedLabel = spec.elements.find((element) => element.type === 'label')
+    const labelText = designedLabel && 'value' in designedLabel ? designedLabel.value : 'ALERT'
+    const username = spec.elements.find((element) => element.type === 'username')
+
+    set('layout', spec.layout)
+    set('entrance', spec.entrance)
+    set('exit', spec.exit)
+    set('labelText', labelText)
+    set('labelAnimation', designedLabel?.animation ?? 'word-reveal')
+    set('usernameAnimation', username?.animation ?? 'fade')
+    set('volume', String(spec.volume))
+
+    const logo = form.elements.namedItem('showLogo')
+    if (logo instanceof HTMLInputElement) logo.checked = spec.showLogo
+
+    setPreview((current) => ({
+      ...current,
+      labelText,
+      layout: spec.layout,
+      entrance: spec.entrance,
+      showLogo: spec.showLogo,
+    }))
+
+    // Play it immediately — the point of describing an alert is seeing whether
+    // the description landed.
+    setReplay((count) => count + 1)
+  }, [])
+
   const tokens = TEMPLATE_TOKENS[eventType] ?? ['username']
   const thresholdUnit = THRESHOLD_UNITS[eventType]
 
@@ -106,7 +155,19 @@ export function AlertEditor({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_24rem] lg:items-start">
+      <div className="space-y-6">
+      <Panel>
+        <PanelHeader
+          title="Design by description"
+          description="Say what you want; the controls below fill in"
+        />
+        {/* Outside the settings form on purpose: nesting one form inside
+            another is invalid HTML, and the browser drops the inner one. */}
+        <DesignPanel eventType={eventType} onApply={applyDesign} disabled={!aiEnabled} />
+      </Panel>
+
       <form
+        ref={formRef}
         action={action}
         onChange={(event) => {
           // Keep the preview in step with whatever is being typed.
@@ -273,6 +334,7 @@ export function AlertEditor({
           <Feedback state={state} />
         </div>
       </form>
+      </div>
 
       <div className="space-y-5 lg:sticky lg:top-8">
         <Panel>

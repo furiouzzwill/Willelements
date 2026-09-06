@@ -190,6 +190,36 @@ const migrations: { name: string; sql: string }[] = [
       CREATE INDEX image_generations_status_idx ON image_generations(status);
     `,
   },
+  {
+    name: '004_ai_commands',
+    sql: `
+      -- One structured generation: a description in, a validated specification
+      -- out. Separate from image_generations because the unit of cost is
+      -- tokens rather than images, and because what it produces is a spec the
+      -- app applies rather than a file it stores.
+      CREATE TABLE ai_commands (
+        id TEXT PRIMARY KEY,
+        brand_id TEXT REFERENCES brands(id) ON DELETE SET NULL,
+        -- What was being designed, e.g. alert-design.
+        kind TEXT NOT NULL,
+        -- What it was for, e.g. channel.follow.
+        target TEXT,
+        model TEXT NOT NULL,
+        prompt TEXT NOT NULL,
+        -- The validated specification, kept so a design can be re-applied.
+        result TEXT,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        -- NULL where the provider reported no usage. Distinct from 0.
+        cost_estimate REAL,
+        status TEXT NOT NULL DEFAULT 'succeeded',
+        error TEXT,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+      CREATE INDEX ai_commands_created_idx ON ai_commands(created_at);
+      CREATE INDEX ai_commands_kind_idx ON ai_commands(kind);
+    `,
+  },
 ]
 
 /**

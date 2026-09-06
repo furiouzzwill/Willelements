@@ -37,6 +37,7 @@ describe('migrations', () => {
     assert.equal(applied.length, LATEST_VERSION)
     assert.equal(db.pragma('user_version', { simple: true }), LATEST_VERSION)
     assert.deepEqual(tableNames(db), [
+      'ai_commands',
       'alert_configs',
       'assets',
       'brands',

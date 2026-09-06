@@ -1,6 +1,8 @@
 # AI generation
 
-**Status: planned (Phase 9). Not implemented.**
+**Status: implemented.** Image generation ships as AI Create and Stream
+Packages. Structured generation ships as **Design by description** on each
+alert — the first piece of the AI Create studio described below.
 
 ## Image generation
 
@@ -62,6 +64,19 @@ This is a security boundary, not a style preference:
 - Custom widgets, if they ever ship, require an isolated sandbox first.
 
 ## AI Create studio
+
+**Shipped for alerts.** Open any alert, describe it — "loud and aggressive,
+glitchy, big name, no logo" — and the controls fill in. The model returns a
+specification against a JSON Schema built from the app's own element and
+animation constants, so the two cannot drift; the result is then parsed by the
+same Zod schema the renderer uses, which is the gate that actually decides.
+Nothing is saved until you press Save, and a design costs about $0.0002.
+
+Verified against the real API with opposite descriptions: "loud and aggressive,
+glitchy, no logo" produced a glitch entrance at volume 1 with no logo, while
+"calm and minimal, just the name, quiet" produced a fade at volume 0.3 with the
+logo — and dropped the label element entirely, because the description said
+*just* the name.
 
 The eventual interface: a creator describes what they want — "a purple cyberpunk
 subscriber alert using my logo", "a Halloween version of my stream package",

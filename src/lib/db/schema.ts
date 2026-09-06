@@ -293,6 +293,41 @@ export const imageGenerations = sqliteTable(
   ],
 )
 
+/**
+ * One structured generation — a description in, a validated specification out.
+ *
+ * Separate from `image_generations` because the unit of cost is tokens rather
+ * than images, and because what it produces is a spec the app applies rather
+ * than a file it stores. The result is kept so a design can be re-applied
+ * without paying to generate it again.
+ */
+export const aiCommands = sqliteTable(
+  'ai_commands',
+  {
+    id: id(),
+    brandId: text('brand_id').references(() => brands.id, { onDelete: 'set null' }),
+    /** What was being designed, e.g. `alert-design`. */
+    kind: text('kind').notNull(),
+    /** What it was for, e.g. `channel.follow`. */
+    target: text('target'),
+    model: text('model').notNull(),
+    prompt: text('prompt').notNull(),
+    /** The validated specification. Null on a failed command. */
+    result: text('result', { mode: 'json' }),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    /** Null where the provider reported no usage — distinct from zero. */
+    costEstimate: real('cost_estimate'),
+    status: text('status').notNull().default('succeeded'),
+    error: text('error'),
+    createdAt: timestamp('created_at'),
+  },
+  (table) => [
+    index('ai_commands_created_idx').on(table.createdAt),
+    index('ai_commands_kind_idx').on(table.kind),
+  ],
+)
+
 export type Brand = typeof brands.$inferSelect
 export type Asset = typeof assets.$inferSelect
 export type Overlay = typeof overlays.$inferSelect
@@ -302,3 +337,4 @@ export type ConnectedAccount = typeof connectedAccounts.$inferSelect
 export type StreamEvent = typeof streamEvents.$inferSelect
 export type RenderJob = typeof renderJobs.$inferSelect
 export type ImageGeneration = typeof imageGenerations.$inferSelect
+export type AiCommand = typeof aiCommands.$inferSelect

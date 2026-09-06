@@ -126,3 +126,39 @@ export function formatCost(dollars: number | null): string {
   if (dollars === 0) return '$0.00'
   return dollars < 0.01 ? `$${dollars.toFixed(4)}` : `$${dollars.toFixed(2)}`
 }
+
+/* -------------------------------------------------------------------------- */
+/* Text                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The model that turns a description into an alert specification.
+ *
+ * Cost-optimised on purpose: the task is one small JSON object against a fixed
+ * schema, which is not work that needs a frontier model. At these rates a
+ * design costs a small fraction of a cent, so the spend counter for it exists
+ * for honesty rather than for restraint.
+ */
+export const TEXT_MODEL = 'gpt-5.6-luna'
+
+/** Dollars per million tokens, read on PRICES_CHECKED_AT. */
+export const TEXT_PRICE_PER_MILLION = { input: 0.2, output: 1.2 }
+
+/**
+ * Estimated dollars for one structured call.
+ *
+ * Null when the provider did not report usage. As everywhere else in this
+ * project that is different from zero: zero would claim the call was free.
+ */
+export function tokensToCost(
+  inputTokens: number | null,
+  outputTokens: number | null,
+): number | null {
+  if (inputTokens === null || outputTokens === null) return null
+
+  const dollars =
+    (inputTokens / 1_000_000) * TEXT_PRICE_PER_MILLION.input +
+    (outputTokens / 1_000_000) * TEXT_PRICE_PER_MILLION.output
+
+  return Math.round(dollars * 1_000_000) / 1_000_000
+}

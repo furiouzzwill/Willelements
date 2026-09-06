@@ -49,6 +49,7 @@ describe('schema and migrations agree', () => {
     const names = tables.map((table) => getTableName(table)).sort()
 
     assert.deepEqual(names, [
+      'ai_commands',
       'alert_configs',
       'assets',
       'brands',

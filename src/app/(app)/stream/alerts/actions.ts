@@ -152,3 +152,46 @@ export async function toggleAlert(formData: FormData): Promise<void> {
   updateAlertConfig(type.data as EventType, { enabled: !config.enabled })
   revalidate(type.data)
 }
+
+export type DesignFormState = {
+  error?: string
+  message?: string
+  /** The generated spec, for the editor to apply without a round trip. */
+  spec?: unknown
+}
+
+/**
+ * "Make it look like…" — a description becomes an alert specification.
+ *
+ * Nothing is saved. The generated spec is handed back for the editor to load
+ * into its own controls so it can be previewed and adjusted, and it only
+ * reaches the database if the person then presses Save. Designing costs a
+ * fraction of a cent; overwriting a working alert without being asked would
+ * cost more than that to undo.
+ */
+export async function designAlertAction(
+  _prev: DesignFormState,
+  formData: FormData,
+): Promise<DesignFormState> {
+  const type = eventTypeSchema.safeParse(formData.get('eventType'))
+  if (!type.success) return { error: 'Unknown alert type.' }
+
+  const description = String(formData.get('description') ?? '').trim()
+  if (!description) return { error: 'Describe the alert you want.' }
+  if (description.length > 600) return { error: 'Keep the description under 600 characters.' }
+
+  try {
+    const { designAlert } = await import('@/lib/services/alert-design-service')
+    const result = await designAlert({ eventType: type.data, description })
+
+    return {
+      message: 'Designed. Look it over, then Save to keep it.',
+      spec: result.spec,
+    }
+  } catch (error) {
+    console.error('[alerts] design failed', error)
+    return {
+      error: error instanceof Error ? error.message : 'That design could not be generated.',
+    }
+  }
+}

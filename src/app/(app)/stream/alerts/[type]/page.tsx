@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/shell/page-header'
 import { ButtonLink } from '@/components/ui/button'
 import { defaultBrandDna } from '@/lib/schemas/brand'
 import { EVENT_LABELS, EVENT_TYPES, type EventType } from '@/lib/schemas/event'
+import { hasApiKey } from '@/lib/providers/openai/text'
 import { getAlertConfig } from '@/lib/services/alert-service'
 import { getDefaultBrand } from '@/lib/services/brand-service'
 import { buildTestEvent } from '@/lib/services/test-event-service'
@@ -46,6 +47,7 @@ export default async function AlertEditorPage({ params }: PageProps<'/stream/ale
         }}
         dna={dna}
         logoUrl={brand?.logoAssetId ? `/api/assets/${brand.logoAssetId}` : null}
+        aiEnabled={hasApiKey()}
         // The same builder the Test Alert button uses, so the preview shows a
         // realistic name and realistic values for this event type.
         sampleEvent={buildTestEvent(eventType)}
