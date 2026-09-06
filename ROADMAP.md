@@ -3,7 +3,8 @@
 Each phase is focused, testable and shippable. A phase is not complete until
 typecheck, lint and build all pass and its exit criteria are demonstrably met.
 
-**Current position: Phase 9 complete — pending a live Twitch connection.**
+**Current position: Phase 9 complete. Twitch is connected to a real channel and
+an overlay has run live on an actual stream.**
 
 ---
 
@@ -221,7 +222,7 @@ Three bugs this phase found:
 
 ---
 
-## Phase 7 — Twitch events ✅ (pending your credentials)
+## Phase 7 — Twitch events ✅ (connected; one claim still unobserved)
 
 Protocol verified against the official docs before writing any code:
 
@@ -259,9 +260,16 @@ in a browser: fired a raid, watched "SynthFox raided with 150" render in the
 overlay, confirmed it was recorded, excluded from the real feed, visible and
 marked when tests are shown, and cleared on request.
 
-**Not yet proven:** the WebSocket itself carrying a genuine Twitch event. That
-needs a registered Twitch app connected to a real channel — the one step that
-cannot be done without your credentials.
+**Connected.** A registered Twitch app is authorised against a real channel.
+Tokens encrypt, store and decrypt; the REST path answers with channel identity,
+live status, follower count and recent follows, and the dashboard reads them.
+
+**Still unobserved:** the EventSub WebSocket carrying a genuine Twitch event.
+The connection exists, but no real follow, raid, sub or `stream.online` has been
+watched arriving over the socket and firing an alert. Everything either side of
+it is proven — test events travel the same `recordEvent` path and render in a
+live overlay — so this is one link in a chain whose every other link is
+demonstrated. It closes the first time a real event lands in the activity feed.
 
 Test events now go through `recordEvent`, the same door a real event uses, so a
 passing test genuinely exercises the real path rather than a shortcut past it.

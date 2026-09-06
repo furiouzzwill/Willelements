@@ -13,7 +13,8 @@ single folder you own.
 
 ## Current status
 
-**Phase 9 — HyperFrames motion graphics. Complete, pending a live Twitch connection.**
+**Phase 9 — HyperFrames motion graphics. Complete. Twitch is connected to a real
+channel and an overlay has run live on an actual stream.**
 
 Working today:
 
@@ -58,6 +59,20 @@ Not working yet — and not pretended to:
 
 The dashboard shows **empty states rather than sample metrics**. Displaying a
 number no provider actually gave us is treated as a bug.
+
+### Verified on a real stream
+
+Confirmed on a live channel rather than in tests alone:
+
+- Twitch OAuth against a registered app, tokens encrypted at rest and read back
+- Channel identity, live status, follower count and recent follows, all from the
+  provider rather than invented
+- An overlay running as an OBS browser source **on an actual broadcast**, with a
+  follower goal widget showing real numbers
+
+The one thing still unobserved is a genuine event crossing the EventSub
+WebSocket. See Phase 7 in `ROADMAP.md` — it is a single link in a chain whose
+every other link is demonstrated.
 
 ---
 
