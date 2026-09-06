@@ -426,10 +426,25 @@ times four. The four pieces are two square and two wide, which are not priced
 alike, so it overstated a medium package by 18% ($0.20 against $0.17). The form
 now takes the real list of sizes.
 
-**Not verified end to end:** no image has actually been generated. That needs an
-OpenAI key and spends real money, so the request path, the provider's response
-shape and the resulting asset are unproven in the same way Phase 7's WebSocket
-was. Everything either side of the call is tested.
+**Verified end to end**, with a real key and real money. One logo concept on
+`gpt-image-1-mini` at low quality — the cheapest combination available, $0.005:
+
+- The call succeeded and returned base64, decoded to a 1024×1024 PNG
+- **Genuinely transparent**: 88.7% of the frame at alpha 0, corner at 0
+- **No lettering**, so the instruction against it held — image models add
+  garbled text otherwise, which makes a logo unusable
+- The brand's own palette came through: the mark is the brand purple with the
+  cyan accent, neither of which was named as a word
+- Saved as an asset with `type: logo`, prompt, provider and model recorded
+- Spend recorded exactly once: `{"total":0.005,"succeededCount":1}`
+
+**Caught by that first real run:** `ImageProviderError` used a TypeScript
+constructor parameter property. That is syntax rather than a type, so Node's
+strip-only mode cannot load it — and this project's entire test harness runs on
+Node's stripping. `next build` compiles with SWC and accepted it silently, so
+nothing failed until something imported the module at runtime. `TwitchApiError`
+already avoided this; the class now matches, and a test imports the module so
+the harness catches a recurrence rather than a person does.
 
 ---
 

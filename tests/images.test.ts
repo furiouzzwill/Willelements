@@ -97,6 +97,24 @@ describe('pricing', () => {
   })
 })
 
+describe('module loading', () => {
+  test('the provider module loads under Node\'s type stripping', async () => {
+    // Node runs this project's TypeScript by stripping types, and some TS
+    // syntax is not a type — a constructor parameter property is the one that
+    // bit here. `next build` compiles with SWC and accepts it happily, so the
+    // failure only shows up when something actually imports the module at
+    // runtime. Importing it here is the cheapest possible guard.
+    const images = await import('../src/lib/providers/openai/images.ts')
+
+    assert.equal(typeof images.generateImage, 'function')
+    assert.equal(typeof images.hasApiKey, 'function')
+
+    const error = new images.ImageProviderError('nope', 'auth')
+    assert.equal(error.kind, 'auth')
+    assert.equal(error.name, 'ImageProviderError')
+  })
+})
+
 describe('prompts', () => {
   test('the brand palette reaches the prompt as hex', () => {
     const parsed = brand.brandDna.parse({ colors: { primary: '#123456' } })

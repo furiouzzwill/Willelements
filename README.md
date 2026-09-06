@@ -57,7 +57,7 @@ Working today:
 - One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- 274 tests, no test dependencies
+- 275 tests, no test dependencies
 
 Not working yet — and not pretended to:
 

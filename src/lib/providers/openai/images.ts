@@ -19,13 +19,28 @@ const ENDPOINT = 'https://api.openai.com/v1/images/generations'
 /** Generation is slow — minutes at high quality — and the default fetch timeout is not. */
 const TIMEOUT_MS = 300_000
 
+export type ImageErrorKind =
+  | 'no-key'
+  | 'auth'
+  | 'rate-limit'
+  | 'refused'
+  | 'network'
+  | 'provider'
+
+/**
+ * Fields are declared and assigned rather than written as constructor
+ * parameter properties. Node runs this project's TypeScript by stripping types,
+ * and a parameter property is syntax rather than a type — it fails to load.
+ * `next build` compiles with SWC and would not have caught it; the test runner
+ * does. `TwitchApiError` is written the same way for the same reason.
+ */
 export class ImageProviderError extends Error {
-  constructor(
-    message: string,
-    readonly kind: 'no-key' | 'auth' | 'rate-limit' | 'refused' | 'network' | 'provider',
-  ) {
+  readonly kind: ImageErrorKind
+
+  constructor(message: string, kind: ImageErrorKind) {
     super(message)
     this.name = 'ImageProviderError'
+    this.kind = kind
   }
 }
 
