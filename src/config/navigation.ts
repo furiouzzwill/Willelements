@@ -97,10 +97,14 @@ export const navigation: NavSection[] = [
     label: 'Analytics',
     icon: 'analytics',
     items: [
-      { label: 'Overview', href: '/analytics', phase: 11 },
-      { label: 'Twitch', href: '/analytics/twitch', phase: 11 },
-      { label: 'Streams', href: '/analytics/streams', phase: 11 },
-      { label: 'Audience', href: '/analytics/audience', phase: 11 },
+      // Analytics was brought forward from Phase 11. It needed no new provider
+      // credentials — every figure is counted from events already in the
+      // database — so it shipped as soon as there was activity worth reading.
+      // The rest of Phase 11 (Goals, Labels, OBS, YouTube) is still unbuilt.
+      { label: 'Overview', href: '/analytics', phase: 9 },
+      { label: 'Twitch', href: '/analytics/twitch', phase: 9 },
+      { label: 'Streams', href: '/analytics/streams', phase: 9 },
+      { label: 'Audience', href: '/analytics/audience', phase: 9 },
       { label: 'YouTube', href: '/analytics/youtube', phase: 12 },
       { label: 'Growth', href: '/analytics/growth', phase: 12 },
     ],

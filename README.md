@@ -46,16 +46,20 @@ Working today:
 - **Motion graphics** — an animated logo, a seamlessly looping scene card and a
   transparent lower third, generated from your Brand DNA and rendered to video
   in the background with HyperFrames, then saved to your asset library
+- **Analytics** — totals, events per day, a breakdown by type, your streams
+  rebuilt from their start and end events, and who cheered, raided and gifted.
+  Counted from recorded events; test events never count and providers are never
+  added together
 - One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- 238 tests, no test dependencies
+- 256 tests, no test dependencies
 
 Not working yet — and not pretended to:
 
 - No AI image generation (Phase 10) — the only part that will ever cost money
-- No analytics pages yet (Phase 11)
 - No YouTube (Phase 11), no chatbot or community tools (Phase 12)
+- Goals, Labels and the OBS integration are still locked (Phase 11)
 
 The dashboard shows **empty states rather than sample metrics**. Displaying a
 number no provider actually gave us is treated as a bug.

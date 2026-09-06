@@ -389,13 +389,53 @@ Things worth recording from this phase:
 
 ---
 
-## Phase 11 — YouTube
+## Phase 11 — Analytics and YouTube
+
+### Analytics ✅ (brought forward)
+
+Pulled ahead of the rest of Phase 11 because it needed no new provider
+credentials — every figure is counted from events already in `stream_events` —
+and there was finally real activity to read.
+
+- [x] `analyticsSummary`, `streamsReport`, `audienceReport`, all counted from
+      recorded events rather than modelled
+- [x] **Test events never count.** The exclusion is in the query, not in a
+      caller that might forget it
+- [x] Providers stay separate — a combined follower total would be a number
+      neither provider agrees with, so the Twitch page scopes to `twitch` and
+      says why its two follower figures differ
+- [x] **Overview** — totals, events per day, breakdown by type
+- [x] **Twitch** — channel figures from the API beside events we recorded,
+      labelled as the different things they are
+- [x] **Streams** — sessions rebuilt by pairing `stream.online` with the next
+      `stream.offline`, tolerating a missing half on either side
+- [x] **Audience** — top cheerers, raiders and gifters, grouped by actor id so
+      a rename does not split someone in two
+- [x] Empty states rather than zeros when nothing has been recorded
+- [x] Charts as inline SVG — no chart dependency added; quiet days render as
+      zero columns rather than being dropped
+- [x] 18 tests over the aggregation rules
+
+**Proven:** seeded a throwaway database with three streams' worth of events plus
+one test event carrying 999,999 bits, then read every page. The test event
+appears in no total. Bits, raid viewers and gifted subs each match the sum of
+their events. The open stream shows `Live now` with an unknown length rather
+than a duration measured against the clock.
+
+Two layout bugs were found by screenshotting the pages rather than by the
+tests: colliding axis labels at the right edge, and a short panel stretched to
+match a tall one beside it. Both are fixed. Neither was visible from a passing
+test suite, which is the argument for looking at the thing.
+
+### YouTube
 
 > Verify current Google/YouTube API scopes and quotas first.
 
 - [ ] Google OAuth with minimal scopes, localhost redirect
 - [ ] Channel information and basic statistics
 - [ ] Keep provider metrics identifiable; never invent a combined figure
+- [ ] Goals, Labels and the OBS integration — the rest of this phase's
+      navigation, still locked
 
 ---
 
