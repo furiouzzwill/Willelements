@@ -13,8 +13,8 @@ single folder you own.
 
 ## Current status
 
-**Phase 9 — HyperFrames motion graphics. Complete. Twitch is connected to a real
-channel and an overlay has run live on an actual stream.**
+**Twitch is connected to a real channel and an overlay has run live on an actual
+stream. Motion graphics, analytics and AI artwork all ship.**
 
 Working today:
 
@@ -50,15 +50,19 @@ Working today:
   rebuilt from their start and end events, and who cheered, raided and gifted.
   Counted from recorded events; test events never count and providers are never
   added together
+- **AI Create and Stream Packages** — logo concepts, stream backgrounds, channel
+  panels and offline cards generated from your Brand DNA, with a spend counter
+  that is clear about being an estimate. Needs your own OpenAI key; it is the
+  only part of this project that costs money
 - One-click backup and restore of everything you have
 - Application shell with the full product navigation
 - Dashboard with a live setup checklist read from the database
-- 256 tests, no test dependencies
+- 274 tests, no test dependencies
 
 Not working yet — and not pretended to:
 
-- No AI image generation (Phase 10) — the only part that will ever cost money
 - No YouTube (Phase 11), no chatbot or community tools (Phase 12)
+- Graphics, Social Content and Templates are still locked (Phase 10)
 - Goals, Labels and the OBS integration are still locked (Phase 11)
 
 The dashboard shows **empty states rather than sample metrics**. Displaying a

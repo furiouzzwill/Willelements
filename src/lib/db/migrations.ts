@@ -157,6 +157,39 @@ const migrations: { name: string; sql: string }[] = [
       CREATE INDEX render_jobs_created_idx ON render_jobs(created_at);
     `,
   },
+  {
+    name: '003_image_generations',
+    sql: `
+      -- One row per paid call to an image provider.
+      --
+      -- Kept separate from assets because the two do not correspond: a refused
+      -- prompt or a provider error costs nothing and produces no asset, and a
+      -- generated asset can be deleted while the money remains spent. A spend
+      -- counter that lost history when you tidied your asset library would be
+      -- worse than none.
+      CREATE TABLE image_generations (
+        id TEXT PRIMARY KEY,
+        brand_id TEXT REFERENCES brands(id) ON DELETE SET NULL,
+        subject TEXT NOT NULL,
+        provider TEXT NOT NULL DEFAULT 'openai',
+        model TEXT NOT NULL,
+        quality TEXT NOT NULL,
+        size TEXT NOT NULL,
+        prompt TEXT NOT NULL,
+        -- NULL where no verifiable price is published for the model. Distinct
+        -- from 0, which would claim the call was free.
+        cost_estimate REAL,
+        status TEXT NOT NULL DEFAULT 'succeeded',
+        error TEXT,
+        -- SET NULL rather than CASCADE: deleting the picture must not delete
+        -- the record that it was paid for.
+        asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+      CREATE INDEX image_generations_created_idx ON image_generations(created_at);
+      CREATE INDEX image_generations_status_idx ON image_generations(status);
+    `,
+  },
 ]
 
 /**

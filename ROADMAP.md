@@ -376,16 +376,60 @@ Things worth recording from this phase:
 
 ---
 
-## Phase 10 — OpenAI images
+## Phase 10 — OpenAI images ✅ (AI Create and Stream Packages)
 
-> Verify the current image API, model names and sizes first.
 > **This is the only part of the project that costs money.**
 
-- [ ] `ImageGenerationService`, server-side only
-- [ ] Logo concepts and stream backgrounds
-- [ ] Brand DNA feeds the prompt
-- [ ] Assets stored with prompt, provider and model recorded
-- [ ] A visible spend counter — you should always know what you've spent
+The API was verified before any code was written, and it mattered: the obvious
+default, `gpt-image-1`, **retires on 2026-10-23**. Building on it would have
+shipped something with weeks to live. `gpt-image-1.5` is the default instead.
+
+- [x] Image generation server-side only, as a single `fetch` — no SDK, in
+      keeping with the CLI and GSAP decisions elsewhere
+- [x] Logo concepts, stream backgrounds, channel panels and offline cards
+- [x] Brand DNA feeds the prompt through **one** module, so two subjects cannot
+      disagree about what "luxury" means — the same argument as `identity.ts`
+- [x] Assets stored with prompt, provider and model recorded, so a result you
+      liked can be reproduced
+- [x] **A visible spend counter**, and honest about what it is
+- [x] **Stream package** — all four pieces from one press, generated
+      sequentially so a rate limit stops at a known point rather than leaving an
+      arbitrary paid-for subset
+- [x] 15 tests over pricing and prompt construction
+- [ ] Graphics, Social Content, Templates and Notifications — the rest of this
+      phase's navigation, still locked
+
+**The spend counter is an estimate, and says so.** It is computed from a price
+list read on a date; it cannot see credits, discounts, tax or tier. Presenting
+that as a billed figure would be inventing a number no provider gave us, which
+is the failure this project cares most about. So the page carries the word
+estimate, the date, and a pointer to OpenAI's dashboard as the authority.
+
+Three consequences of taking that seriously:
+
+- A model with no verifiable published price estimates **null, never zero**.
+  Zero claims the call was free; null says we do not know. Unpriced generations
+  are counted beside the total rather than folded into it.
+- A **failed** generation records a null cost, not zero — it was not charged,
+  and the row exists to explain the history rather than to bill it.
+- The generation row is written **after** the provider answers. A row written
+  first would have to be un-written on failure, and a crash between the two
+  would record a charge that never happened.
+
+Spend history lives in its own table rather than on the asset. A refused prompt
+produces no asset, and deleting a picture must not erase the record that it was
+paid for — a counter that reset when you tidied your library would be worse
+than none.
+
+**Caught by checking the arithmetic:** the package form first quoted one size
+times four. The four pieces are two square and two wide, which are not priced
+alike, so it overstated a medium package by 18% ($0.20 against $0.17). The form
+now takes the real list of sizes.
+
+**Not verified end to end:** no image has actually been generated. That needs an
+OpenAI key and spends real money, so the request path, the provider's response
+shape and the resulting asset are unproven in the same way Phase 7's WebSocket
+was. Everything either side of the call is tested.
 
 ---
 

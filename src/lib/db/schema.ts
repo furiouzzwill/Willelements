@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   index,
   integer,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -254,6 +255,44 @@ export const renderJobs = sqliteTable(
   ],
 )
 
+/**
+ * One paid call to an image provider.
+ *
+ * Deliberately not folded into `assets`: a refused prompt costs nothing and
+ * produces no asset, and deleting a generated picture must not erase the record
+ * that it was paid for. The spend counter reads this table, so it survives any
+ * amount of tidying in the asset library.
+ */
+export const imageGenerations = sqliteTable(
+  'image_generations',
+  {
+    id: id(),
+    brandId: text('brand_id').references(() => brands.id, { onDelete: 'set null' }),
+    /** Which of the fixed subjects this was — logo concept, background, and so on. */
+    subject: text('subject').notNull(),
+    provider: text('provider').notNull().default('openai'),
+    model: text('model').notNull(),
+    quality: text('quality').notNull(),
+    size: text('size').notNull(),
+    /** Stored verbatim, so a result you liked can be reproduced. */
+    prompt: text('prompt').notNull(),
+    /**
+     * Estimated dollars, from a published price list read on a date — not a
+     * figure the provider gave us for this account. Null where no verifiable
+     * price exists, which is different from zero.
+     */
+    costEstimate: real('cost_estimate'),
+    status: text('status').notNull().default('succeeded'),
+    error: text('error'),
+    assetId: text('asset_id').references(() => assets.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at'),
+  },
+  (table) => [
+    index('image_generations_created_idx').on(table.createdAt),
+    index('image_generations_status_idx').on(table.status),
+  ],
+)
+
 export type Brand = typeof brands.$inferSelect
 export type Asset = typeof assets.$inferSelect
 export type Overlay = typeof overlays.$inferSelect
@@ -262,3 +301,4 @@ export type AlertConfig = typeof alertConfigs.$inferSelect
 export type ConnectedAccount = typeof connectedAccounts.$inferSelect
 export type StreamEvent = typeof streamEvents.$inferSelect
 export type RenderJob = typeof renderJobs.$inferSelect
+export type ImageGeneration = typeof imageGenerations.$inferSelect

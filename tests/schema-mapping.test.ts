@@ -53,6 +53,7 @@ describe('schema and migrations agree', () => {
       'assets',
       'brands',
       'connected_accounts',
+      'image_generations',
       'overlay_widgets',
       'overlays',
       'render_jobs',

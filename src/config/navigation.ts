@@ -72,8 +72,11 @@ export const navigation: NavSection[] = [
     label: 'Create',
     icon: 'sparkle',
     items: [
-      { label: 'AI Create', href: '/create', phase: 10 },
-      { label: 'Stream Packages', href: '/create/packages', phase: 10 },
+      // AI Create and Stream Packages shipped in the Phase 10 image work. The
+      // rest of Phase 10 (Graphics, Social Content, Templates) is still unbuilt,
+      // so it stays locked rather than pointing at pages that do not exist.
+      { label: 'AI Create', href: '/create', phase: 9 },
+      { label: 'Stream Packages', href: '/create/packages', phase: 9 },
       { label: 'Graphics', href: '/create/graphics', phase: 10 },
       { label: 'Animations', href: '/create/animations', phase: 9 },
       { label: 'Social Content', href: '/create/social', phase: 10 },
