@@ -63,6 +63,15 @@ Make it good:
 export type CompositionRequest = {
   eventType: EventType
   description: string
+  /**
+   * The composition being changed, when this is a revision.
+   *
+   * Iteration is the whole difference between a generator and something you
+   * can actually work with. Without it, "make the particles bigger" has to be
+   * a complete re-description, and the result is a different alert rather than
+   * the same one adjusted.
+   */
+  previous?: { html: string; summary: string }
 }
 
 export type CompositionResult = {
@@ -103,21 +112,38 @@ export async function generateComposition(
 
   const { colors, visualStyle, personality } = brand.dna
 
-  const user = [
+  const context = [
     `Event: ${EVENT_LABELS[request.eventType]} (${request.eventType}).`,
     `Brand style: ${visualStyle.style}, ${visualStyle.detail} detail, ${visualStyle.canvas} canvas.`,
     personality.length ? `Brand character: ${personality.join(', ')}.` : '',
     `Palette, already available as CSS variables: primary ${colors.primary}, ` +
       `secondary ${colors.secondary}, accent ${colors.accent}, text ${colors.text}.`,
-    '',
-    `Build this: ${description}`,
-  ]
-    .filter(Boolean)
-    .join('\n')
+  ].filter(Boolean)
+
+  // A revision carries the current composition, so a change is a change rather
+  // than a fresh attempt that happens to share a description.
+  const user = request.previous
+    ? [
+        ...context,
+        '',
+        'You are REVISING an existing composition. Keep everything the request',
+        'does not mention — the same structure, the same feel — and change only',
+        'what is asked for. Return the complete revised composition, not a diff.',
+        '',
+        `What it currently does: ${request.previous.summary || '(no summary)'}`,
+        '',
+        'Current composition:',
+        '```html',
+        request.previous.html,
+        '```',
+        '',
+        `The change: ${description}`,
+      ].join('\n')
+    : [...context, '', `Build this: ${description}`].join('\n')
 
   const common = {
     brandId: brand.id,
-    kind: 'alert-composition',
+    kind: request.previous ? 'alert-composition-revision' : 'alert-composition',
     model: TEXT_MODEL,
     prompt: description,
     target: request.eventType,

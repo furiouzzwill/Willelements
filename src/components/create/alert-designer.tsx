@@ -40,11 +40,11 @@ const EXAMPLES = [
   'celebratory and bright, everything scaling up fast',
 ]
 
-function DesignButton() {
+function DesignButton({ label, busy }: { label: string; busy: string }) {
   const { pending } = useFormStatus()
   return (
     <Button type="submit" variant="secondary" disabled={pending}>
-      {pending ? 'Designing…' : 'Design it'}
+      {pending ? busy : label}
     </Button>
   )
 }
@@ -172,8 +172,14 @@ export function AlertDesigner({
           </Select>
         </div>
 
+        {mode === 'code' && composition ? (
+          <input type="hidden" name="previous" value={JSON.stringify(composition)} />
+        ) : null}
+
         <div className="space-y-1.5">
-          <Label htmlFor="designer-description">Describe it</Label>
+          <Label htmlFor="designer-description">
+            {mode === 'code' && composition ? 'What should change' : 'Describe it'}
+          </Label>
           <textarea
             id="designer-description"
             name="description"
@@ -181,12 +187,17 @@ export function AlertDesigner({
             maxLength={600}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="e.g. loud and glitchy, big name, no logo"
+            placeholder={
+              mode === 'code' && composition
+                ? 'e.g. more particles, and make the name bigger'
+                : 'e.g. loud and glitchy, big name, no logo'
+            }
             className="w-full rounded-lg border border-line bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
           />
           <p className="text-xs text-ink-subtle">
-            Your Brand DNA supplies the colours and type. This decides the layout, which
-            elements appear, and how they move.
+            {mode === 'code' && composition
+              ? 'Changes the composition below rather than starting again — say only what you want different. Start over clears it.'
+              : 'Your Brand DNA supplies the colours and type. This decides the layout, which elements appear, and how they move.'}
           </p>
         </div>
 
@@ -211,7 +222,24 @@ export function AlertDesigner({
         ) : null}
 
         {enabled ? (
-          <DesignButton />
+          <div className="flex flex-wrap items-center gap-3">
+            <DesignButton
+              label={mode === 'code' && composition ? 'Apply the change' : 'Design it'}
+              busy={mode === 'code' && composition ? 'Revising…' : 'Designing…'}
+            />
+            {mode === 'code' && composition ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setComposition(null)
+                  setDescription('')
+                }}
+                className="text-sm text-ink-subtle hover:text-ink"
+              >
+                Start over
+              </button>
+            ) : null}
+          </div>
         ) : (
           <p className="text-sm text-ink-subtle">
             Add an OpenAI API key to design alerts by description.
@@ -279,6 +307,18 @@ export function AlertDesigner({
             >
               Replay
             </button>
+
+            {/* The code is shown because it is yours: the point of this mode is
+                that a real composition was written, and a thing you cannot read
+                is one you have to take on trust. */}
+            <details className="rounded-lg border border-line bg-canvas">
+              <summary className="cursor-pointer px-3 py-2 text-xs text-ink-subtle">
+                Show the code
+              </summary>
+              <pre className="max-h-64 overflow-auto px-3 pb-3 text-[11px] leading-relaxed text-ink-muted">
+                <code>{composition.html}</code>
+              </pre>
+            </details>
 
             <form action={compSaveAction} className="space-y-2 pt-1">
               <input type="hidden" name="eventType" value={eventType} />

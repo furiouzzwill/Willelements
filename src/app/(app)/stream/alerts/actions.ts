@@ -247,9 +247,28 @@ export async function composeAlertAction(
   if (!description) return { error: 'Describe the alert you want.' }
   if (description.length > 600) return { error: 'Keep the description under 600 characters.' }
 
+  // A revision carries the composition being changed, so "make it bigger" is a
+  // change to that one rather than a fresh attempt at the same words.
+  let previous: { html: string; summary: string } | undefined
+  const previousRaw = formData.get('previous')
+  if (typeof previousRaw === 'string' && previousRaw.length > 0) {
+    try {
+      const parsed = JSON.parse(previousRaw) as { html?: unknown; summary?: unknown }
+      if (typeof parsed.html === 'string') {
+        previous = {
+          html: parsed.html,
+          summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+        }
+      }
+    } catch {
+      // A previous that cannot be read is treated as absent: the worst case is
+      // a fresh generation, which is better than refusing to do anything.
+    }
+  }
+
   try {
     const { generateComposition } = await import('@/lib/services/composition-service')
-    const result = await generateComposition({ eventType: type.data, description })
+    const result = await generateComposition({ eventType: type.data, description, previous })
 
     return {
       message: result.composition.summary || 'Built. Look it over, then Save to keep it.',

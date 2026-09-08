@@ -116,6 +116,18 @@ What contains it:
 The residual risk is a composition that runs and looks wrong, which is the risk
 of any animation anyone writes by hand — and it is previewed before it is saved.
 
+**It iterates.** A composition can be revised: the current one is sent back with
+the change requested, and only what was asked for moves. Measured across a
+revision, all 18 class names and keyframes survived and the byte count moved by
+88 — a change rather than a re-roll. That loop is the difference between a
+generator and something anyone can actually work with, because the first result
+is rarely the one you want and re-describing from scratch produces a different
+alert rather than a better one.
+
+The code is shown, in full, next to the preview. The point of this mode is that
+a real composition was written; a thing you cannot read is one you have to take
+on trust.
+
 Guided mode remains the default, and an alert with no composition is unchanged.
 
 ## What this is still not
