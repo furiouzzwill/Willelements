@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import type { BrandDna } from '@/lib/schemas/brand'
 import type { Composition } from '@/lib/schemas/composition'
 import {
   buildFrameDocument,
+  FRAME_MESSAGE_SOURCE,
   type CompositionValues,
 } from '@/lib/composition/frame-document'
 
@@ -31,6 +32,12 @@ export function CompositionFrame({
   height,
   /** Changing this remounts the frame, which replays the composition. */
   replayKey,
+  /**
+   * Called once per mount with what the frame reported about itself: that it
+   * started, or that it threw. This is the only channel out of a null-origin
+   * frame — the parent cannot read its title or its DOM.
+   */
+  onStatus,
 }: {
   composition: Composition
   dna: BrandDna
@@ -39,14 +46,39 @@ export function CompositionFrame({
   width: number | string
   height: number | string
   replayKey?: string | number
+  onStatus?: (status: { ok: boolean; error?: string }) => void
 }) {
   const doc = useMemo(
     () => buildFrameDocument(composition, dna, values, logoUrl),
     [composition, dna, values, logoUrl],
   )
 
+  const frameRef = useRef<HTMLIFrameElement>(null)
+  // Held in a ref so a caller passing an inline function does not tear the
+  // listener down between the frame loading and its one message arriving.
+  const statusRef = useRef(onStatus)
+  useEffect(() => {
+    statusRef.current = onStatus
+  })
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      // Only this frame's own report counts. Anything else on the page is
+      // shouting into the same window.
+      if (event.source !== frameRef.current?.contentWindow) return
+      const data = event.data as { source?: string; error?: string; ready?: boolean } | null
+      if (!data || data.source !== FRAME_MESSAGE_SOURCE) return
+      if (data.error) statusRef.current?.({ ok: false, error: data.error })
+      else if (data.ready) statusRef.current?.({ ok: true })
+    }
+
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [replayKey])
+
   return (
     <iframe
+      ref={frameRef}
       key={replayKey}
       title="Alert composition"
       // allow-scripts and nothing else. Adding allow-same-origin here would

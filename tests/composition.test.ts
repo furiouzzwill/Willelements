@@ -77,6 +77,33 @@ describe('the screen', () => {
     assert.ok(schema.screenComposition('<script>for(;;){}</script>').length > 0)
   })
 
+  test('rejects a composition that would forge the frame\'s own report', () => {
+    // The frame tells the app whether it started cleanly. A composition that
+    // could send that message could claim to be fine and then be saved broken.
+    for (const source of [
+      '<script>parent.postMessage({ ready: true }, "*")</script>',
+      '<script>window.parent.postMessage({}, "*")</script>',
+      '<script>top.postMessage({}, "*")</script>',
+      '<script>postMessage({}, "*")</script>',
+    ]) {
+      assert.ok(
+        schema.screenComposition(source).length > 0,
+        `should have been rejected: ${source}`,
+      )
+    }
+  })
+
+  test('does not mistake ordinary property access for reaching outward', () => {
+    // `rect.top` and `node.parent` are everywhere in layout code; rejecting
+    // them would make the screen useless noise.
+    const ok = `<script>
+      const rect = el.getBoundingClientRect();
+      const y = rect.top + node.parent.offset;
+    </script>`
+
+    assert.deepEqual(schema.screenComposition(ok), [])
+  })
+
   test('allows an ordinary animated composition', () => {
     const ok = `<style>@keyframes a { to { opacity: 1 } }</style>
       <div style="animation: a 1s">{{username}}</div>
@@ -128,10 +155,13 @@ describe('the frame document', () => {
   })
 
   test('an absent logo substitutes to nothing rather than to undefined', () => {
-    const doc = build('<img src="{{logo}}">')
+    const doc = build('<img src="{{logo}}" alt="{{logo}}">')
 
-    assert.equal(doc.includes('undefined'), false)
-    assert.equal(doc.includes('null'), false)
+    // Scoped to the substituted markup: the wrapper's own prose is allowed to
+    // contain either word, and asserting over the whole document made this
+    // test fail on a comment rather than on a defect.
+    assert.match(doc, /<img src="" alt="">/)
+    assert.equal(/\{\{logo\}\}/.test(doc), false)
   })
 
   test('brand colours reach the frame as variables', () => {
@@ -139,6 +169,38 @@ describe('the frame document', () => {
 
     assert.match(doc, /--primary:/)
     assert.match(doc, /--accent:/)
+  })
+})
+
+describe('the frame report', () => {
+  test('reports outward by postMessage rather than by its title', () => {
+    // A sandboxed frame with a null origin cannot be read by its parent — no
+    // title, no DOM. postMessage is the only way out, so the preflight has to
+    // use it or it does not exist.
+    const doc = build('<div>hi</div>')
+
+    assert.match(doc, /parent\.postMessage/)
+    assert.match(doc, new RegExp(frame.FRAME_MESSAGE_SOURCE))
+    assert.equal(/document\.title\s*=/.test(doc), false)
+  })
+
+  test('reports both a throw and a clean start', () => {
+    const doc = build('<div>hi</div>')
+
+    assert.match(doc, /window\.onerror/)
+    assert.match(doc, /unhandledrejection/)
+    assert.match(doc, /ready:\s*true/)
+  })
+
+  test('installs the error handler before the composition and signals ready after', () => {
+    // Ordering is the whole thing. An inline script that throws as it is
+    // parsed does so before anything later in the document exists, so a
+    // handler installed at the end of the body never sees a failure on load —
+    // and a "ready" sent before the composition ran would mean nothing.
+    const doc = build('<div id="mine">hi</div>')
+
+    assert.ok(doc.indexOf('window.onerror') < doc.indexOf('id="mine"'))
+    assert.ok(doc.indexOf('id="mine"') < doc.indexOf('ready: true'))
   })
 })
 

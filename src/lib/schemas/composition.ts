@@ -24,8 +24,9 @@ import { z } from 'zod'
  *  - no forms, no popups, no top-level navigation.
  *
  * And it is never saved until it has actually been rendered once and observed
- * not to throw. A composition that fails its preflight is rejected with the
- * error, not stored and discovered live.
+ * not to throw. The frame reports that outward by `postMessage`, which is the
+ * only channel out of a null-origin frame — the parent cannot read its title
+ * or its DOM — and the save button stays disabled until a clean run arrives.
  *
  * The residual risk is a composition that runs but looks wrong, which is the
  * same risk as any animation someone writes by hand — and it is previewed
@@ -67,6 +68,15 @@ const FORBIDDEN: { pattern: RegExp; reason: string }[] = [
   { pattern: /\bimport\s*\(/i, reason: 'dynamic import' },
   { pattern: /\bnavigator\s*\.\s*sendBeacon/i, reason: 'network access' },
   { pattern: /\bwindow\s*\.\s*(parent|top|opener)/i, reason: 'reaching outside the frame' },
+  // The frame reports its own health outward by postMessage. A composition
+  // that could send one too could claim to have started cleanly when it did
+  // not, so the channel stays the wrapper's alone. The lookbehind is what
+  // keeps `rect.top` and `node.parent` out of it.
+  {
+    pattern: /(?<![.\w$])(parent|top|opener|self|globalThis|window)\s*\.\s*postMessage/i,
+    reason: 'messaging out of the frame',
+  },
+  { pattern: /(?<![.\w$])postMessage\s*\(/i, reason: 'messaging out of the frame' },
   { pattern: /\bdocument\s*\.\s*cookie/i, reason: 'cookie access' },
   { pattern: /\blocalStorage\b|\bsessionStorage\b|\bindexedDB\b/i, reason: 'storage access' },
   { pattern: /\bwhile\s*\(\s*true\s*\)/i, reason: 'an unbounded loop' },

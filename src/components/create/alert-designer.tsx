@@ -49,10 +49,10 @@ function DesignButton({ label, busy }: { label: string; busy: string }) {
   )
 }
 
-function SaveButton({ label }: { label: string }) {
+function SaveButton({ label, disabled }: { label: string; disabled?: boolean }) {
   const { pending } = useFormStatus()
   return (
-    <Button type="submit" disabled={pending}>
+    <Button type="submit" disabled={pending || disabled}>
       {pending ? 'Saving…' : label}
     </Button>
   )
@@ -90,6 +90,11 @@ export function AlertDesigner({
   // expressive and genuinely riskier — see schemas/composition.ts.
   const [mode, setMode] = useState<'guided' | 'code'>('guided')
   const [composition, setComposition] = useState<Composition | null>(null)
+  // What the preview frame reported about itself on its current run. The
+  // documented promise is that a composition is not saved until it has been
+  // rendered once without throwing, and this is what makes that true rather
+  // than only written down.
+  const [frameStatus, setFrameStatus] = useState<{ ok: boolean; error?: string } | null>(null)
 
   const [composeState, composeAction] = useActionState<DesignFormState, FormData>(
     composeAlertAction,
@@ -105,6 +110,9 @@ export function AlertDesigner({
     if (composeState.spec && composeState.spec !== appliedComposition.current) {
       appliedComposition.current = composeState.spec
       setComposition(composeState.spec as Composition)
+      // A new composition has not proved anything yet, so saving waits for its
+      // own preview to report rather than inheriting the last one's verdict.
+      setFrameStatus(null)
       setReplay((count) => count + 1)
     }
   }, [composeState.spec])
@@ -261,6 +269,7 @@ export function AlertDesigner({
                 dna={dna}
                 logoUrl={logoUrl}
                 replayKey={replay}
+                onStatus={setFrameStatus}
                 width={1920}
                 height={1080}
                 values={{
@@ -320,10 +329,21 @@ export function AlertDesigner({
               </pre>
             </details>
 
+            {frameStatus && !frameStatus.ok ? (
+              <p role="alert" className="rounded-lg bg-live/10 px-3 py-2 text-sm text-live">
+                This composition threw while it was running: {frameStatus.error}. Describe
+                the problem above and apply the change — saving it would put a broken
+                alert on your stream.
+              </p>
+            ) : null}
+
             <form action={compSaveAction} className="space-y-2 pt-1">
               <input type="hidden" name="eventType" value={eventType} />
               <input type="hidden" name="composition" value={JSON.stringify(composition)} />
-              <SaveButton label={`Save to ${EVENT_LABELS[eventType]}`} />
+              <SaveButton
+                label={`Save to ${EVENT_LABELS[eventType]}`}
+                disabled={frameStatus ? !frameStatus.ok : true}
+              />
             </form>
 
             <form action={compSaveAction}>
