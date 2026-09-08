@@ -228,3 +228,85 @@ export async function applyDesignedSpec(
 
   return { message: 'Saved. It will play the next time that event fires.' }
 }
+
+/**
+ * Generates a full composition — real markup, styles and script.
+ *
+ * Deliberately separate from `designAlertAction`, which stays inside the
+ * closed vocabulary. This is the mode that writes code, and keeping the two
+ * apart means the safer one is never reached by accident.
+ */
+export async function composeAlertAction(
+  _prev: DesignFormState,
+  formData: FormData,
+): Promise<DesignFormState> {
+  const type = eventTypeSchema.safeParse(formData.get('eventType'))
+  if (!type.success) return { error: 'Unknown alert type.' }
+
+  const description = String(formData.get('description') ?? '').trim()
+  if (!description) return { error: 'Describe the alert you want.' }
+  if (description.length > 600) return { error: 'Keep the description under 600 characters.' }
+
+  try {
+    const { generateComposition } = await import('@/lib/services/composition-service')
+    const result = await generateComposition({ eventType: type.data, description })
+
+    return {
+      message: result.composition.summary || 'Built. Look it over, then Save to keep it.',
+      spec: result.composition,
+    }
+  } catch (error) {
+    console.error('[alerts] composition failed', error)
+    return {
+      error: error instanceof Error ? error.message : 'That composition could not be built.',
+    }
+  }
+}
+
+/** Saves a generated composition onto an alert, or clears one. */
+export async function applyComposition(
+  _prev: AlertFormState,
+  formData: FormData,
+): Promise<AlertFormState> {
+  const type = eventTypeSchema.safeParse(formData.get('eventType'))
+  if (!type.success) return { error: 'Unknown alert type.' }
+
+  const existing = getAlertConfig(type.data)
+
+  if (formData.get('clear') === '1') {
+    // The rest of the spec was kept while a composition was in use, so
+    // removing it returns the alert to exactly what it was before.
+    const rest = { ...existing.spec }
+    delete rest.composition
+    updateAlertConfig(type.data, { spec: alertSpec.parse(rest) })
+    revalidate(type.data)
+    return { message: 'Composition removed. The alert is back to its previous design.' }
+  }
+
+  let raw: unknown
+  try {
+    raw = JSON.parse(String(formData.get('composition') ?? ''))
+  } catch {
+    return { error: 'That composition could not be read.' }
+  }
+
+  // Re-validated and re-screened server-side. It was checked when generated,
+  // but it has been through the browser since.
+  const { composition, screenComposition } = await import('@/lib/schemas/composition')
+  const parsed = composition.safeParse(raw)
+  if (!parsed.success) return { error: 'That composition is not in a usable shape.' }
+
+  const issues = screenComposition(parsed.data.html)
+  if (issues.length > 0) {
+    return {
+      error: `Rejected: it contained ${[...new Set(issues.map((i) => i.reason))].join(', ')}.`,
+    }
+  }
+
+  updateAlertConfig(type.data, {
+    spec: alertSpec.parse({ ...existing.spec, composition: parsed.data }),
+  })
+  revalidate(type.data)
+
+  return { message: 'Saved. It will play the next time that event fires.' }
+}

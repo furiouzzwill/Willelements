@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { EVENT_TYPES } from '@/lib/schemas/event'
+import { composition } from '@/lib/schemas/composition'
 import { motionTimeline } from '@/lib/schemas/motion'
 
 /**
@@ -80,6 +81,17 @@ export const alertSpec = z.object({
    * motion nobody enumerated in advance.
    */
   motion: motionTimeline.optional(),
+  /**
+   * A generated composition, when one has been built for this alert.
+   *
+   * Takes precedence over everything else: an alert with a composition renders
+   * as that composition in an isolated frame, and the element list, layout and
+   * timeline are not used. They are kept rather than cleared so removing the
+   * composition returns the alert to what it was.
+   *
+   * See `schemas/composition.ts` for what this trades and what contains it.
+   */
+  composition: composition.optional(),
 })
 
 export type AlertSpec = z.infer<typeof alertSpec>

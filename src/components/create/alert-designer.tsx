@@ -4,7 +4,9 @@ import { useActionState, useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 
 import {
+  applyComposition,
   applyDesignedSpec,
+  composeAlertAction,
   designAlertAction,
   type AlertFormState,
   type DesignFormState,
@@ -12,6 +14,8 @@ import {
 import { AlertCard } from '@/components/alerts/alert-card'
 import { ALERT_ANIMATION_CSS } from '@/components/alerts/animations.css'
 import { CanvasPreview } from '@/components/alerts/canvas-preview'
+import { CompositionFrame } from '@/components/alerts/composition-frame'
+import type { Composition } from '@/lib/schemas/composition'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Label } from '@/components/ui/field'
 import { Select } from '@/components/ui/select'
@@ -80,6 +84,32 @@ export function AlertDesigner({
   const [spec, setSpec] = useState<AlertSpec | null>(null)
   const [replay, setReplay] = useState(0)
 
+  // Two modes, kept apart on purpose. "Guided" composes inside the closed
+  // vocabulary and cannot produce anything the app has not been taught to
+  // render. "Code" has the model write a real composition, which is more
+  // expressive and genuinely riskier — see schemas/composition.ts.
+  const [mode, setMode] = useState<'guided' | 'code'>('guided')
+  const [composition, setComposition] = useState<Composition | null>(null)
+
+  const [composeState, composeAction] = useActionState<DesignFormState, FormData>(
+    composeAlertAction,
+    {},
+  )
+  const [compSaveState, compSaveAction] = useActionState<AlertFormState, FormData>(
+    applyComposition,
+    {},
+  )
+
+  const appliedComposition = useRef<unknown>(null)
+  useEffect(() => {
+    if (composeState.spec && composeState.spec !== appliedComposition.current) {
+      appliedComposition.current = composeState.spec
+      setComposition(composeState.spec as Composition)
+      setReplay((count) => count + 1)
+    }
+  }, [composeState.spec])
+
+
   // Replay on a loop while a design is on screen. Entrance and exit are where
   // most of the difference between two designs lives, and they are over in
   // under a second — a still frame of a glitch and a still frame of a fade are
@@ -105,7 +135,27 @@ export function AlertDesigner({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_22rem] lg:items-start">
-      <form action={designAction} className="space-y-4 px-5 py-4">
+      <form
+        action={mode === 'code' ? composeAction : designAction}
+        className="space-y-4 px-5 py-4"
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="designer-mode">Mode</Label>
+          <Select
+            id="designer-mode"
+            value={mode}
+            onChange={(event) => setMode(event.target.value as 'guided' | 'code')}
+          >
+            <option value="guided">Guided — composed from the built-in vocabulary</option>
+            <option value="code">Code — writes a real composition, more range</option>
+          </Select>
+          <p className="text-xs text-ink-subtle">
+            {mode === 'code'
+              ? 'Writes actual markup, CSS and JavaScript. It runs in an isolated frame with no network and no access to the app — but it is generated code, so preview it before you save.'
+              : 'Composes motion from parts the app already knows how to draw. Bounded, and it cannot produce anything unrenderable.'}
+          </p>
+        </div>
+
         <div className="space-y-1.5">
           <Label htmlFor="designer-event">Which alert</Label>
           <Select
@@ -154,9 +204,9 @@ export function AlertDesigner({
           ))}
         </ul>
 
-        {designState.error ? (
+        {(mode === 'code' ? composeState.error : designState.error) ? (
           <p role="alert" className="rounded-lg bg-live/10 px-3 py-2 text-sm text-live">
-            {designState.error}
+            {mode === 'code' ? composeState.error : designState.error}
           </p>
         ) : null}
 
@@ -176,7 +226,24 @@ export function AlertDesigner({
 
         <style dangerouslySetInnerHTML={{ __html: ALERT_ANIMATION_CSS }} />
         <CanvasPreview>
-          {spec ? (
+          {mode === 'code' && composition ? (
+            <div style={{ width: 1920, height: 1080, transformOrigin: '0 0' }}>
+              <CompositionFrame
+                composition={composition}
+                dna={dna}
+                logoUrl={logoUrl}
+                replayKey={replay}
+                width={1920}
+                height={1080}
+                values={{
+                  username: samples[eventType].actor.displayName,
+                  amount: '150',
+                  message: 'lets go',
+                  label: 'ALERT',
+                }}
+              />
+            </div>
+          ) : spec ? (
             <AlertCard
               key={replay}
               motionId={`d${replay}`}
@@ -189,7 +256,56 @@ export function AlertDesigner({
           ) : null}
         </CanvasPreview>
 
-        {spec ? (
+        {mode === 'code' && composition ? (
+          <>
+            <p className="text-xs text-ink-subtle">{composition.summary}</p>
+            <dl className="space-y-1 text-xs text-ink-subtle">
+              <div className="flex justify-between gap-2">
+                <dt>Length</dt>
+                <dd className="text-ink-muted">{composition.durationMs}ms</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt>Size</dt>
+                <dd className="text-ink-muted">
+                  {(composition.html.length / 1024).toFixed(1)} KB
+                </dd>
+              </div>
+            </dl>
+
+            <button
+              type="button"
+              onClick={() => setReplay((count) => count + 1)}
+              className="text-sm text-accent hover:underline"
+            >
+              Replay
+            </button>
+
+            <form action={compSaveAction} className="space-y-2 pt-1">
+              <input type="hidden" name="eventType" value={eventType} />
+              <input type="hidden" name="composition" value={JSON.stringify(composition)} />
+              <SaveButton label={`Save to ${EVENT_LABELS[eventType]}`} />
+            </form>
+
+            <form action={compSaveAction}>
+              <input type="hidden" name="eventType" value={eventType} />
+              <input type="hidden" name="clear" value="1" />
+              <button type="submit" className="text-xs text-ink-subtle hover:text-ink">
+                Remove the composition from this alert
+              </button>
+            </form>
+
+            {compSaveState.error ? (
+              <p role="alert" className="rounded-lg bg-live/10 px-3 py-2 text-sm text-live">
+                {compSaveState.error}
+              </p>
+            ) : null}
+            {compSaveState.message ? (
+              <p className="rounded-lg bg-positive/10 px-3 py-2 text-sm text-positive">
+                {compSaveState.message}
+              </p>
+            ) : null}
+          </>
+        ) : spec ? (
           <>
             <dl className="space-y-1 text-xs text-ink-subtle">
               <div className="flex justify-between gap-2">

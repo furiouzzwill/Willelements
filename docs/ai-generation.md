@@ -85,6 +85,41 @@ what arc; the geometry, the DOM and the CSS are computed here. Colours are
 named (`primary`, `accent`) and resolved through a table into CSS variables, so
 a specification chooses a colour rather than supplying one.
 
+## Code mode
+
+**A deliberate exception, added on the owner's explicit and repeated
+instruction** after the composed timeline was judged not expressive enough.
+Written down here rather than left implied, because whoever reads this next
+deserves to know it was a decision and not an oversight.
+
+In code mode a model writes a real composition — markup, styles and script —
+and it runs. That gives up what the rest of this document protects: it can be
+wrong in ways a schema cannot catch.
+
+What contains it:
+
+- It **never runs in the application**. It runs in an iframe with
+  `sandbox="allow-scripts"` and nothing else. Not `allow-same-origin` — the two
+  together annul each other, since a frame with both can reach its parent and
+  remove its own sandbox. With scripts alone the frame has a null origin: no
+  cookies, no storage, no handle on the document.
+- A **Content-Security-Policy inside the frame permits no network at all**.
+  `default-src 'none'` covers every fetch destination there is, so nothing can
+  be loaded and nothing can be sent anywhere.
+- A **screen** rejects the obviously wrong before anyone previews it — network
+  calls, storage, `window.parent`, unbounded loops, nested frames — and it is
+  re-run server-side on save, because the composition has been through a
+  browser since it was generated.
+- Values from viewers are **escaped**. Someone called `<script>alert(1)</script>`
+  is a funny name, not an event.
+
+The residual risk is a composition that runs and looks wrong, which is the risk
+of any animation anyone writes by hand — and it is previewed before it is saved.
+
+Guided mode remains the default, and an alert with no composition is unchanged.
+
+## What this is still not
+
 What this is *not* is a coding agent. It cannot invent a new kind of thing — a
 shader, an SVG morph, a physics simulation — because there is no vocabulary for
 those. It can combine what exists in ways nobody enumerated, which is a very

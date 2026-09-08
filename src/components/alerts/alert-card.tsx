@@ -3,6 +3,7 @@
 import type { CSSProperties } from 'react'
 
 import type { AlertSpec } from '@/lib/schemas/alert'
+import { CompositionFrame } from '@/components/alerts/composition-frame'
 import { compileMotion } from '@/lib/motion/compile'
 import { renderTemplate, templateValuesFor } from '@/lib/schemas/alert'
 import type { BrandDna } from '@/lib/schemas/brand'
@@ -120,6 +121,32 @@ export function AlertCard({
   // Older alerts have no `motion`, and must keep animating exactly as before —
   // this shipped after people already had alerts they were happy with.
   const composed = spec.motion ? compileMotion(spec.motion, motionId) : null
+
+  // A composition is the whole alert, not a layer on it. Rendering the DOM
+  // card underneath as well would put two alerts on screen.
+  if (spec.composition) {
+    return (
+      <CompositionFrame
+        composition={spec.composition}
+        dna={dna}
+        logoUrl={logoUrl}
+        replayKey={motionId}
+        width={1920}
+        height={1080}
+        values={{
+          username: event.actor.displayName,
+          amount: String(
+            (event.data as Record<string, unknown>).bits ??
+              (event.data as Record<string, unknown>).viewers ??
+              (event.data as Record<string, unknown>).total ??
+              '',
+          ),
+          message: String((event.data as Record<string, unknown>).message ?? ''),
+          label: label && 'value' in label ? label.value : '',
+        }}
+      />
+    )
+  }
 
   return (
     <>
