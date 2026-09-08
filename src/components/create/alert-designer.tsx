@@ -179,6 +179,7 @@ export function AlertDesigner({
           {spec ? (
             <AlertCard
               key={replay}
+              motionId={`d${replay}`}
               event={samples[eventType]}
               spec={spec}
               messageTemplate={DEFAULT_TEMPLATES[eventType] ?? "{{username}}"}

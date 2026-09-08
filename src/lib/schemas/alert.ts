@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { EVENT_TYPES } from '@/lib/schemas/event'
+import { motionTimeline } from '@/lib/schemas/motion'
 
 /**
  * The structured alert specification.
@@ -70,6 +71,15 @@ export const alertSpec = z.object({
   showLogo: z.boolean().default(true),
   /** Playback volume for the alert sound, if one is set. */
   volume: z.number().min(0).max(1).default(0.6),
+  /**
+   * A composed animation, when one has been designed.
+   *
+   * Optional so alerts saved before this existed keep working: without it the
+   * renderer falls back to `entrance`/`exit`. The named animations are a set of
+   * six, which is a ceiling — a timeline is how a description gets to produce
+   * motion nobody enumerated in advance.
+   */
+  motion: motionTimeline.optional(),
 })
 
 export type AlertSpec = z.infer<typeof alertSpec>

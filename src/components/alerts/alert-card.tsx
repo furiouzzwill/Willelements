@@ -3,6 +3,7 @@
 import type { CSSProperties } from 'react'
 
 import type { AlertSpec } from '@/lib/schemas/alert'
+import { compileMotion } from '@/lib/motion/compile'
 import { renderTemplate, templateValuesFor } from '@/lib/schemas/alert'
 import type { BrandDna } from '@/lib/schemas/brand'
 import type { NormalizedEvent } from '@/lib/schemas/event'
@@ -89,6 +90,12 @@ export function AlertCard({
   logoUrl,
   /** Set once the alert is retiring, so the exit animation runs. */
   leaving = false,
+  /**
+   * Unique per rendered alert, so two on screen at once cannot share keyframe
+   * names — the second would otherwise silently animate with the first's
+   * motion.
+   */
+  motionId = 'a',
 }: {
   event: NormalizedEvent
   spec: AlertSpec
@@ -96,6 +103,7 @@ export function AlertCard({
   dna: BrandDna
   logoUrl: string | null
   leaving?: boolean
+  motionId?: string
 }) {
   const { colors, typography } = dna
   const label = spec.elements.find((element) => element.type === 'label')
@@ -108,7 +116,14 @@ export function AlertCard({
 
   const isBanner = spec.layout === 'banner'
 
+  // A composed timeline wins over the named entrance when the alert has one.
+  // Older alerts have no `motion`, and must keep animating exactly as before —
+  // this shipped after people already had alerts they were happy with.
+  const composed = spec.motion ? compileMotion(spec.motion, motionId) : null
+
   return (
+    <>
+      {composed ? <style dangerouslySetInnerHTML={{ __html: composed.css }} /> : null}
     <div
       className="we-alert"
       style={{
@@ -122,8 +137,9 @@ export function AlertCard({
         borderRadius: isBanner ? 14 : 0,
         border: isBanner ? `1px solid ${colors.primary}55` : 'none',
         animation: leaving
-          ? `${EXIT[spec.exit] ?? 'we-out-fade'} ${EXIT_MS}ms ease-in both`
-          : `${ENTRANCE[spec.entrance] ?? 'we-fade'} ${ENTRANCE_MS}ms cubic-bezier(0.2,0.9,0.2,1) both`,
+          ? `${EXIT[spec.exit] ?? 'we-out-fade'} ${spec.motion?.exitMs ?? EXIT_MS}ms ease-in both`
+          : (composed?.animations.card ??
+            `${ENTRANCE[spec.entrance] ?? 'we-fade'} ${ENTRANCE_MS}ms cubic-bezier(0.2,0.9,0.2,1) both`),
         ...ALIGNMENT[spec.layout],
       }}
     >
@@ -134,7 +150,11 @@ export function AlertCard({
           alt=""
           width={isBanner ? 48 : 96}
           height={isBanner ? 48 : 96}
-          style={{ objectFit: 'contain', ...elementAnimation(logoAnimation, 60) }}
+          style={{
+            objectFit: 'contain',
+            ...elementAnimation(logoAnimation, 60),
+            ...(composed?.animations.logo ? { animation: composed.animations.logo } : {}),
+          }}
         />
       ) : null}
 
@@ -153,7 +173,14 @@ export function AlertCard({
           {label.animation === 'word-reveal' && 'value' in label ? (
             <WordReveal text={label.value} style={{}} />
           ) : (
-            <span style={elementAnimation(label.animation, 120)}>
+            <span
+              style={{
+                ...elementAnimation(label.animation, 120),
+                ...(composed?.animations.label
+                  ? { animation: composed.animations.label }
+                  : {}),
+              }}
+            >
               {'value' in label ? label.value : ''}
             </span>
           )}
@@ -169,6 +196,9 @@ export function AlertCard({
           color: colors.text,
           textShadow: isBanner ? 'none' : '0 4px 24px rgba(0,0,0,0.75)',
           ...elementAnimation(usernameAnimation, 220),
+          ...(composed?.animations.username
+            ? { animation: composed.animations.username }
+            : {}),
         }}
       >
         {message}
@@ -187,6 +217,7 @@ export function AlertCard({
         }}
       />
     </div>
+    </>
   )
 }
 

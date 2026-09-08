@@ -57,6 +57,25 @@ composition.
 Every specification is schema-validated before use. An element type that is not
 in the registry is rejected — it is not passed through and hoped for.
 
+**Motion is composed, not chosen.** The first version let the model pick an
+entrance from a list of six, which was a ceiling: whatever anyone described,
+the answer was one of six, and every design settled into the same handful of
+looks. A spec now carries a `motion` timeline — per part, a list of keyframes
+with real numbers — which `lib/motion/compile.ts` turns into actual CSS
+`@keyframes`.
+
+That does not cross the line above. Nothing in a timeline is code: a track
+names a part from a closed set and an easing from a closed set, and everything
+else is a bounded number. **The application writes every character of the
+stylesheet**; no text from a model is ever concatenated into a rule. Easings
+are table lookups rather than `cubic-bezier(...)` strings for exactly that
+reason, and every value is clamped to what the layout can survive — an
+unbounded translate would push an alert off the canvas, and a large enough
+scale would cover the stream.
+
+The timeline is optional. Alerts saved before it existed keep their named
+entrance and render exactly as they did.
+
 This is a security boundary, not a style preference:
 
 - Never execute arbitrary user JavaScript in the primary application.

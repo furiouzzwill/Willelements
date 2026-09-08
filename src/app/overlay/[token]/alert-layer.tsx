@@ -288,6 +288,7 @@ export function AlertLayer({
           }
         >
           <AlertCard
+              motionId={current.id}
             key={current.id}
             event={current.event}
             spec={current.config.spec}

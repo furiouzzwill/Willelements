@@ -15,6 +15,7 @@ import {
   type AlertSpec,
 } from '@/lib/schemas/alert'
 import { EVENT_LABELS, type EventType } from '@/lib/schemas/event'
+import { MOTION_EASINGS, MOTION_PARTS } from '@/lib/schemas/motion'
 import { getDefaultBrand } from '@/lib/services/brand-service'
 import { tokensToCost, TEXT_MODEL } from '@/lib/providers/openai/pricing'
 
@@ -57,16 +58,57 @@ export function buildAlertJsonSchema(): Record<string, unknown> {
     },
   })
 
+  const keyframe = {
+    type: 'object',
+    additionalProperties: false,
+    // Strict mode requires every property to be listed as required, so the
+    // model is asked for all of them and the unused ones are given neutral
+    // values rather than omitted.
+    required: ['at', 'opacity', 'x', 'y', 'scale', 'rotate', 'skewX', 'blur'],
+    properties: {
+      at: { type: 'number', description: '0 to 100, position through the track' },
+      opacity: { type: 'number', description: '0 to 1' },
+      x: { type: 'number', description: 'pixels, -400 to 400' },
+      y: { type: 'number', description: 'pixels, -400 to 400' },
+      scale: { type: 'number', description: '0 to 3, 1 is natural size' },
+      rotate: { type: 'number', description: 'degrees, -720 to 720' },
+      skewX: { type: 'number', description: 'degrees, -45 to 45' },
+      blur: { type: 'number', description: 'pixels, 0 to 20' },
+    },
+  }
+
+  const track = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['part', 'delayMs', 'durationMs', 'easing', 'keyframes'],
+    properties: {
+      part: { type: 'string', enum: [...MOTION_PARTS] },
+      delayMs: { type: 'integer', description: '0 to 4000' },
+      durationMs: { type: 'integer', description: '80 to 6000' },
+      easing: { type: 'string', enum: [...MOTION_EASINGS] },
+      keyframes: { type: 'array', items: keyframe },
+    },
+  }
+
   return {
     type: 'object',
     additionalProperties: false,
-    required: ['layout', 'elements', 'entrance', 'exit', 'showLogo', 'volume'],
+    required: ['layout', 'elements', 'entrance', 'exit', 'showLogo', 'volume', 'motion'],
     properties: {
       layout: { type: 'string', enum: ['centered', 'left', 'right', 'banner'] },
       entrance: { type: 'string', enum: [...ENTRANCE_ANIMATIONS] },
       exit: { type: 'string', enum: [...EXIT_ANIMATIONS] },
       showLogo: { type: 'boolean' },
       volume: { type: 'number' },
+      motion: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['tracks', 'exitMs'],
+        properties: {
+          tracks: { type: 'array', items: track },
+          exitMs: { type: 'integer', description: '120 to 1200' },
+        },
+      },
       elements: {
         type: 'array',
         minItems: 1,
@@ -103,10 +145,33 @@ Rules you must follow:
 - Use only element types that make sense for the event being designed for.
 - "username" should appear in almost every alert — it is the point of an alert.
 - Keep elements to at most four. A crowded alert is unreadable in two seconds.
-- Match the described mood with entrance, exit and per-element animation.
-  glitch and wipe read as aggressive; fade and scale read as calm.
 - volume is 0 to 1. Use 0.6 unless the description asks for loud or quiet.
-- The label text should be short and upper case.`
+- The label text should be short and upper case.
+
+MOTION is the important part, and it is yours to compose. Do not settle for a
+generic fade — the "motion" object is where a description becomes a distinct
+animation, and two different descriptions must never produce the same timeline.
+
+Each track animates one part between keyframes you choose:
+- Use "card" to move the whole alert, and name individual parts to have them
+  arrive separately. Staggered delays read as choreography; everything at once
+  reads as a single lump.
+- Keyframes are 0 to 100 percent through that track. Always give one at 0 and
+  one at 100, and put intermediate ones wherever the interest is.
+- Every keyframe must set all eight fields. For any you do not want to change,
+  use the resting value: opacity 1, x 0, y 0, scale 1, rotate 0, skewX 0,
+  blur 0.
+- Think about what the words mean physically. "Slam" is a big scale from above
+  with an overshoot easing and a short duration. "Drift" is a small translate
+  over a long duration with linear easing. "Glitchy" is several small opposing
+  x offsets and skews in quick succession. "Wind up" is anticipate easing with
+  a keyframe that moves the wrong way first. "Bounce" is scale past 1 and
+  settle. Build the motion the description actually describes.
+- Total length should be roughly 400 to 1600ms including delays. An alert that
+  is still arriving after two seconds has missed its moment.
+
+Also set "entrance" and "exit" to the nearest of the older named animations.
+They are a fallback for anything that cannot play your timeline.`
 
 export type DesignRequest = {
   eventType: EventType
