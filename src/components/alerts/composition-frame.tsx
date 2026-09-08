@@ -34,8 +34,9 @@ export function CompositionFrame({
   replayKey,
   /**
    * Called once per mount with what the frame reported about itself: that it
-   * started, or that it threw. This is the only channel out of a null-origin
-   * frame — the parent cannot read its title or its DOM.
+   * started, that it threw, or that it painted something across the whole
+   * frame. This is the only channel out of a null-origin frame — the parent
+   * cannot read its title or its DOM.
    */
   onStatus,
 }: {
@@ -46,7 +47,7 @@ export function CompositionFrame({
   width: number | string
   height: number | string
   replayKey?: string | number
-  onStatus?: (status: { ok: boolean; error?: string }) => void
+  onStatus?: (status: { ok: boolean; error?: string; backdrop?: string }) => void
 }) {
   const doc = useMemo(
     () => buildFrameDocument(composition, dna, values, logoUrl),
@@ -66,10 +67,18 @@ export function CompositionFrame({
       // Only this frame's own report counts. Anything else on the page is
       // shouting into the same window.
       if (event.source !== frameRef.current?.contentWindow) return
-      const data = event.data as { source?: string; error?: string; ready?: boolean } | null
+      const data = event.data as {
+        source?: string
+        error?: string
+        ready?: boolean
+        backdrop?: string
+      } | null
       if (!data || data.source !== FRAME_MESSAGE_SOURCE) return
       if (data.error) statusRef.current?.({ ok: false, error: data.error })
-      else if (data.ready) statusRef.current?.({ ok: true })
+      // A backdrop is reported alongside `ready`: the composition ran fine, it
+      // just covers the stream. That is a different failure from throwing, and
+      // the message the person sees has to say which.
+      else if (data.ready) statusRef.current?.({ ok: true, backdrop: data.backdrop })
     }
 
     window.addEventListener('message', onMessage)

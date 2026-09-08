@@ -204,6 +204,55 @@ describe('the frame report', () => {
   })
 })
 
+describe('the frame keeps its own ground transparent', () => {
+  test('overrides the composition, last, and only on html and body', () => {
+    const doc = build('<style>body{background:#fff}</style><div>hi</div>')
+
+    // After the composition, or the composition's own rule wins on order.
+    const forced = doc.lastIndexOf('background: transparent !important')
+    assert.ok(forced > doc.indexOf('body{background:#fff}'))
+
+    // Scoped to the page's own ground. Forcing element backgrounds off would
+    // erase the alert's panel along with the backdrop.
+    const rule = doc.slice(doc.lastIndexOf('<style>', forced), forced)
+    assert.match(rule, /html,\s*body\s*\{/)
+    assert.equal(/\*\s*\{/.test(rule), false)
+  })
+
+  test('kills a background image on the page as well as a colour', () => {
+    // `background: transparent` alone leaves a gradient painted, which covers
+    // the stream exactly as thoroughly as a flat colour does.
+    const doc = build('<div>hi</div>')
+    assert.match(doc, /background-image:\s*none\s*!important/)
+  })
+})
+
+describe('the full-frame backdrop audit', () => {
+  test('measures the rendered layout rather than reading the source', () => {
+    const doc = build('<div>hi</div>')
+
+    // A regex over CSS would have to guess what it resolves to. The frame has
+    // already run by this point, so there is a real layout to measure.
+    assert.match(doc, /getBoundingClientRect/)
+    assert.match(doc, /getComputedStyle/)
+    assert.match(doc, /findBackdrop/)
+  })
+
+  test('requires both dimensions, so a full-width banner is not a backdrop', () => {
+    const doc = build('<div>hi</div>')
+    assert.match(doc, /box\.width < frameWidth \* 0\.9 \|\| box\.height < frameHeight \* 0\.9/)
+  })
+
+  test('an audit that throws does not fail the composition it audited', () => {
+    const doc = build('<div>hi</div>')
+    const audit = doc.slice(doc.indexOf('backdrop = findBackdrop()'))
+
+    assert.match(audit, /catch/)
+    // Ready is still reported either way.
+    assert.match(audit, /ready:\s*true/)
+  })
+})
+
 describe('bounds', () => {
   test('an enormous composition is rejected', () => {
     const parsed = schema.composition.safeParse({

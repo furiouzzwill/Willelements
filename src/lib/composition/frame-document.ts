@@ -34,7 +34,20 @@ function escapeHtml(value: string): string {
  */
 export const FRAME_MESSAGE_SOURCE = 'willelements:composition'
 
-export type FrameMessage = { source: string; error?: string; ready?: boolean }
+export type FrameMessage = {
+  source: string
+  error?: string
+  ready?: boolean
+  /**
+   * Set when the composition paints something opaque across the whole frame.
+   *
+   * A composition is 1920×1080 and sits over live gameplay, so a full-bleed
+   * background is not a style choice — it is a screen-sized rectangle covering
+   * the stream every time the alert fires. The value describes what was found,
+   * so the message can name it rather than say "something".
+   */
+  backdrop?: string
+}
 
 export type CompositionValues = {
   username: string
@@ -115,6 +128,16 @@ export function buildFrameDocument(
 </head>
 <body>
 ${body}
+<style>
+  /* Last word on the frame's own ground, after the composition's styles.
+     A composition that sets 'body { background: #fff }' is not expressing a
+     preference — it is painting over the gameplay this sits on top of. Element
+     backgrounds are untouched: the alert's own panel still draws normally. */
+  html, body {
+    background: transparent !important;
+    background-image: none !important;
+  }
+</style>
 <script>
   // Sent last, after the composition's own markup and scripts have run and
   // survived. Two frames rather than one, so a composition that throws on its
@@ -122,9 +145,60 @@ ${body}
   //
   // A composition cannot send this itself: the screen rejects postMessage in
   // generated code, precisely so this signal stays the wrapper's.
+  // What the forced-transparent rule above cannot reach: an element inside the
+  // composition stretched across the whole frame. 'html, body' can be overruled
+  // from out here; a div with 'position: fixed; inset: 0' has to be found.
+  //
+  // Measured rather than pattern-matched, because this is the one place with a
+  // real layout to measure — the frame has already run. A regex over the source
+  // would have to guess at what the CSS resolves to.
+  function findBackdrop() {
+    var frameWidth = document.documentElement.clientWidth;
+    var frameHeight = document.documentElement.clientHeight;
+    if (!frameWidth || !frameHeight) return null;
+
+    var nodes = document.body.querySelectorAll('*');
+    for (var i = 0; i < nodes.length; i++) {
+      var element = nodes[i];
+      var box = element.getBoundingClientRect();
+      // Both dimensions, not area: a 1920×80 banner is a legitimate alert and
+      // covers a tenth of the frame either way.
+      if (box.width < frameWidth * 0.9 || box.height < frameHeight * 0.9) continue;
+
+      var styles = getComputedStyle(element);
+      if (styles.visibility === 'hidden' || styles.display === 'none') continue;
+      if (parseFloat(styles.opacity) < 0.15) continue;
+
+      var name = element.tagName.toLowerCase() + (element.id ? '#' + element.id : '');
+
+      if (styles.backgroundImage && styles.backgroundImage !== 'none') {
+        var image = styles.backgroundImage;
+        // Named in a sentence a person reads, so it is trimmed rather than
+        // dumped -- an unbalanced half of a gradient helps nobody.
+        return name + ' (' + (image.length > 60 ? image.slice(0, 60) + '...' : image) + ')';
+      }
+
+      var parts = /rgba?\(([^)]+)\)/.exec(styles.backgroundColor || '');
+      if (parts) {
+        var channels = parts[1].split(',');
+        var alpha = channels.length > 3 ? parseFloat(channels[3]) : 1;
+        // A deliberate light scrim is fine; anything you would notice is not.
+        if (alpha > 0.15) return name + ' (' + styles.backgroundColor + ')';
+      }
+    }
+
+    return null;
+  }
+
   requestAnimationFrame(function () {
     requestAnimationFrame(function () {
-      window.__weReport({ ready: true });
+      var backdrop = null;
+      try {
+        backdrop = findBackdrop();
+      } catch (e) {
+        // An audit that throws must not fail the composition it was auditing.
+      }
+      window.__weReport(backdrop ? { ready: true, backdrop: backdrop } : { ready: true });
     });
   });
 </script>

@@ -94,7 +94,11 @@ export function AlertDesigner({
   // documented promise is that a composition is not saved until it has been
   // rendered once without throwing, and this is what makes that true rather
   // than only written down.
-  const [frameStatus, setFrameStatus] = useState<{ ok: boolean; error?: string } | null>(null)
+  const [frameStatus, setFrameStatus] = useState<{
+    ok: boolean
+    error?: string
+    backdrop?: string
+  } | null>(null)
 
   const [composeState, composeAction] = useActionState<DesignFormState, FormData>(
     composeAlertAction,
@@ -337,12 +341,23 @@ export function AlertDesigner({
               </p>
             ) : null}
 
+            {frameStatus?.ok && frameStatus.backdrop ? (
+              <p role="alert" className="rounded-lg bg-live/10 px-3 py-2 text-sm text-live">
+                This composition paints across the whole frame — {frameStatus.backdrop}.
+                An alert is 1920×1080 over your gameplay, so that is a screen-sized
+                rectangle covering the stream every time it fires. Ask for it to be
+                removed above, then apply the change.
+              </p>
+            ) : null}
+
             <form action={compSaveAction} className="space-y-2 pt-1">
               <input type="hidden" name="eventType" value={eventType} />
               <input type="hidden" name="composition" value={JSON.stringify(composition)} />
               <SaveButton
                 label={`Save to ${EVENT_LABELS[eventType]}`}
-                disabled={frameStatus ? !frameStatus.ok : true}
+                // Blocked on either verdict: one throws, the other covers the
+                // stream. Both are things you would rather not learn live.
+                disabled={frameStatus ? !frameStatus.ok || Boolean(frameStatus.backdrop) : true}
               />
             </form>
 

@@ -28,8 +28,8 @@ export class CompositionError extends Error {}
 const SYSTEM = `You write self-contained animated overlays for a live stream.
 
 You return the complete contents of a <body>: markup, one <style> and one
-<script>. It is rendered inside an isolated frame, 1920x1080, on a transparent
-background over live gameplay.
+<script>. It is rendered inside an isolated frame, 1920x1080, over live
+gameplay. Everything you do not draw stays transparent, and must.
 
 Available to you:
 - CSS variables already defined: --primary, --secondary, --accent, --background,
@@ -38,6 +38,11 @@ Available to you:
   {{message}}, {{label}}, {{logo}}. {{logo}} is a URL or empty — always guard it.
 
 Hard constraints, because of where this runs:
+- NOTHING may cover the frame. No background on the body, no full-bleed panel,
+  no element spanning the whole 1920x1080. This plays on top of live gameplay,
+  so anything that fills the frame is a screen-sized rectangle over the stream.
+  Draw the alert and leave every pixel around it untouched. A composition that
+  paints a backdrop is rejected and cannot be saved.
 - No network of any kind. No fetch, no XMLHttpRequest, no WebSocket, no remote
   scripts, fonts, images or stylesheets. Nothing is available to load. Draw
   everything yourself with CSS and DOM.
