@@ -127,6 +127,16 @@ export function AlertCard({
     <div
       className="we-alert"
       style={{
+        // The compiled CSS refers to brand colours by variable, so a
+        // decoration can be drawn in the brand's palette without any colour
+        // ever arriving from outside as text.
+        ['--we-primary' as string]: colors.primary,
+        ['--we-secondary' as string]: colors.secondary,
+        ['--we-accent' as string]: colors.accent,
+        ['--we-text' as string]: colors.text,
+        // Without depth a rotateX is a flat squash rather than a flip.
+        perspective: composed ? `${composed.perspective}px` : undefined,
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         gap: isBanner ? 6 : 12,
@@ -143,6 +153,26 @@ export function AlertCard({
         ...ALIGNMENT[spec.layout],
       }}
     >
+      {composed?.decorations.map((decoration, index) => (
+        <div
+          key={`${decoration.kind}-${index}`}
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            // Behind the words, and never intercepting anything: this is
+            // scenery, and an overlay is not interactive.
+            zIndex: 0,
+            overflow: decoration.kind === 'shine' ? 'hidden' : 'visible',
+            pointerEvents: 'none',
+          }}
+        >
+          {decoration.pieces.map((piece, pieceIndex) => (
+            <span key={pieceIndex} style={piece.style as CSSProperties} />
+          ))}
+        </div>
+      ))}
+
       {spec.showLogo && logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- local asset, fixed size
         <img
@@ -151,6 +181,7 @@ export function AlertCard({
           width={isBanner ? 48 : 96}
           height={isBanner ? 48 : 96}
           style={{
+            position: 'relative',
             objectFit: 'contain',
             ...elementAnimation(logoAnimation, 60),
             ...(composed?.animations.logo ? { animation: composed.animations.logo } : {}),
@@ -161,6 +192,7 @@ export function AlertCard({
       {label ? (
         <div
           style={{
+            position: 'relative',
             fontFamily: `${typography.heading}, system-ui, sans-serif`,
             fontSize: isBanner ? 14 : 20,
             fontWeight: 700,
@@ -189,6 +221,7 @@ export function AlertCard({
 
       <div
         style={{
+          position: 'relative',
           fontFamily: `${typography.heading}, system-ui, sans-serif`,
           fontSize: isBanner ? 28 : 64,
           fontWeight: 700,
@@ -207,6 +240,7 @@ export function AlertCard({
       <div
         aria-hidden="true"
         style={{
+          position: 'relative',
           marginTop: 4,
           height: 4,
           width: isBanner ? 120 : 200,

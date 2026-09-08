@@ -21,7 +21,9 @@ before(async () => {
   motion = await import('../src/lib/schemas/motion.ts')
 })
 
-function timeline(overrides: Partial<import('../src/lib/schemas/motion.ts').MotionTimeline> = {}) {
+function timeline(
+  overrides: Partial<import('../src/lib/schemas/motion.ts').MotionTimelineInput> = {},
+) {
   return motion.motionTimeline.parse({
     exitMs: 320,
     tracks: [

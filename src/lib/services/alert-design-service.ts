@@ -15,7 +15,7 @@ import {
   type AlertSpec,
 } from '@/lib/schemas/alert'
 import { EVENT_LABELS, type EventType } from '@/lib/schemas/event'
-import { MOTION_EASINGS, MOTION_PARTS } from '@/lib/schemas/motion'
+import { DECORATION_KINDS, MOTION_EASINGS, MOTION_PARTS } from '@/lib/schemas/motion'
 import { getDefaultBrand } from '@/lib/services/brand-service'
 import { tokensToCost, TEXT_MODEL } from '@/lib/providers/openai/pricing'
 
@@ -64,28 +64,61 @@ export function buildAlertJsonSchema(): Record<string, unknown> {
     // Strict mode requires every property to be listed as required, so the
     // model is asked for all of them and the unused ones are given neutral
     // values rather than omitted.
-    required: ['at', 'opacity', 'x', 'y', 'scale', 'rotate', 'skewX', 'blur'],
+    required: [
+      'at', 'opacity', 'x', 'y', 'scale', 'scaleX', 'scaleY',
+      'rotate', 'rotateX', 'rotateY', 'skewX', 'skewY', 'tracking', 'blur',
+    ],
     properties: {
       at: { type: 'number', description: '0 to 100, position through the track' },
       opacity: { type: 'number', description: '0 to 1' },
       x: { type: 'number', description: 'pixels, -400 to 400' },
       y: { type: 'number', description: 'pixels, -400 to 400' },
       scale: { type: 'number', description: '0 to 3, 1 is natural size' },
-      rotate: { type: 'number', description: 'degrees, -720 to 720' },
+      scaleX: { type: 'number', description: '0 to 3, width only — squash and stretch' },
+      scaleY: { type: 'number', description: '0 to 3, height only — squash and stretch' },
+      rotate: { type: 'number', description: 'degrees in the plane, -720 to 720' },
+      rotateX: { type: 'number', description: 'degrees in depth, -360 to 360, a flip' },
+      rotateY: { type: 'number', description: 'degrees in depth, -360 to 360, a flip' },
       skewX: { type: 'number', description: 'degrees, -45 to 45' },
+      skewY: { type: 'number', description: 'degrees, -45 to 45' },
+      tracking: { type: 'number', description: 'letter spacing in em, -0.1 to 1' },
       blur: { type: 'number', description: 'pixels, 0 to 20' },
+    },
+  }
+
+  const decorationSchema = {
+    type: 'object',
+    additionalProperties: false,
+    required: [
+      'kind', 'count', 'spread', 'distance', 'size',
+      'delayMs', 'durationMs', 'easing', 'color', 'shape', 'fade',
+    ],
+    properties: {
+      kind: { type: 'string', enum: [...DECORATION_KINDS] },
+      count: { type: 'integer', description: 'pieces, 1 to 24 (burst and rays)' },
+      spread: { type: 'number', description: 'degrees of arc, 10 to 360' },
+      distance: { type: 'number', description: 'travel in pixels, 10 to 600' },
+      size: { type: 'number', description: 'piece size in pixels, 2 to 80' },
+      delayMs: { type: 'integer', description: '0 to 4000' },
+      durationMs: { type: 'integer', description: '120 to 4000' },
+      easing: { type: 'string', enum: [...MOTION_EASINGS] },
+      color: { type: 'string', enum: ['primary', 'secondary', 'accent', 'text'] },
+      shape: { type: 'string', enum: ['circle', 'square', 'bar'] },
+      fade: { type: 'boolean' },
     },
   }
 
   const track = {
     type: 'object',
     additionalProperties: false,
-    required: ['part', 'delayMs', 'durationMs', 'easing', 'keyframes'],
+    required: ['part', 'delayMs', 'durationMs', 'easing', 'repeat', 'yoyo', 'keyframes'],
     properties: {
       part: { type: 'string', enum: [...MOTION_PARTS] },
       delayMs: { type: 'integer', description: '0 to 4000' },
       durationMs: { type: 'integer', description: '80 to 6000' },
       easing: { type: 'string', enum: [...MOTION_EASINGS] },
+      repeat: { type: 'integer', description: 'times to play, 1 to 8' },
+      yoyo: { type: 'boolean', description: 'play alternate repeats backwards' },
       keyframes: { type: 'array', items: keyframe },
     },
   }
@@ -103,9 +136,11 @@ export function buildAlertJsonSchema(): Record<string, unknown> {
       motion: {
         type: 'object',
         additionalProperties: false,
-        required: ['tracks', 'exitMs'],
+        required: ['tracks', 'decorations', 'perspective', 'exitMs'],
         properties: {
           tracks: { type: 'array', items: track },
+          decorations: { type: 'array', items: decorationSchema },
+          perspective: { type: 'number', description: 'depth in px for 3D flips, 0 to 2400' },
           exitMs: { type: 'integer', description: '120 to 1200' },
         },
       },
@@ -161,14 +196,34 @@ Each track animates one part between keyframes you choose:
 - Every keyframe must set all eight fields. For any you do not want to change,
   use the resting value: opacity 1, x 0, y 0, scale 1, rotate 0, skewX 0,
   blur 0.
-- Think about what the words mean physically. "Slam" is a big scale from above
-  with an overshoot easing and a short duration. "Drift" is a small translate
-  over a long duration with linear easing. "Glitchy" is several small opposing
-  x offsets and skews in quick succession. "Wind up" is anticipate easing with
-  a keyframe that moves the wrong way first. "Bounce" is scale past 1 and
-  settle. Build the motion the description actually describes.
+- Think about what the words mean physically, and use the whole vocabulary:
+  - "Slam" — big scale from above, overshoot easing, short duration, then
+    scaleX above 1 with scaleY below it for a frame or two so it squashes on
+    landing and springs back.
+  - "Drift" — small translate over a long duration with linear easing.
+  - "Glitchy" — several small opposing x offsets and skews, or a short track
+    with repeat 3 to 6.
+  - "Wind up" — anticipate easing with a keyframe that moves the wrong way
+    first.
+  - "Flip" or "card turning" — rotateY from 90 or -90 to 0.
+  - "Shake", "pulse", "throb", "wobble" — a short two-or-three keyframe track
+    with repeat above 1. Add yoyo true for anything that should breathe rather
+    than restart.
+  - "Tighten" or "expand" — animate tracking on a text part.
 - Total length should be roughly 400 to 1600ms including delays. An alert that
   is still arriving after two seconds has missed its moment.
+
+DECORATIONS are extra layers, and they are how a description gets particles,
+sparks, confetti or a shine rather than the nearest translate. Use them when
+the description calls for something the parts themselves cannot be:
+- burst — count pieces thrown outward across spread degrees. Confetti is
+  shape square with a wide spread; sparks are shape circle, small size, fast.
+- rays — spokes stretching outward from the centre. Good for "explode",
+  "radiate", "shine out".
+- ring — a single expanding circle. Good for "shockwave", "pulse out", "impact".
+- shine — a highlight sweeping across. Good for "gleam", "polish", "premium".
+Use at most two, and none at all for anything described as minimal or calm —
+scenery on a restrained alert is the opposite of what was asked for.
 
 Also set "entrance" and "exit" to the nearest of the older named animations.
 They are a fallback for anything that cannot play your timeline.`

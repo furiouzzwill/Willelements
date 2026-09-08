@@ -73,6 +73,25 @@ reason, and every value is clamped to what the layout can survive — an
 unbounded translate would push an alert off the canvas, and a large enough
 scale would cover the stream.
 
+**The vocabulary is wide on purpose.** A closed set is only a limitation if it
+is a small one, so it covers what alerts actually do: independent `scaleX` and
+`scaleY` for squash and stretch, `rotateX`/`rotateY` with perspective for
+flips, `tracking` for letter spacing, `repeat` and `yoyo` for shakes and
+pulses, and decorations — `burst`, `rays`, `ring`, `shine` — for the particles
+and sweeps that no amount of translating a text node will ever be.
+
+The app draws every piece of those. A burst says how many, how far and across
+what arc; the geometry, the DOM and the CSS are computed here. Colours are
+named (`primary`, `accent`) and resolved through a table into CSS variables, so
+a specification chooses a colour rather than supplying one.
+
+What this is *not* is a coding agent. It cannot invent a new kind of thing — a
+shader, an SVG morph, a physics simulation — because there is no vocabulary for
+those. It can combine what exists in ways nobody enumerated, which is a very
+large space, and it is bounded in kind rather than in quantity. That trade is
+deliberate: this runs in a browser source on the machine encoding someone's
+stream, and the rule against executing generated code is what makes that safe.
+
 The timeline is optional. Alerts saved before it existed keep their named
 entrance and render exactly as they did.
 

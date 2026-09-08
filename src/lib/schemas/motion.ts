@@ -80,8 +80,21 @@ export const motionKeyframe = z.object({
   x: z.number().min(-400).max(400).optional(),
   y: z.number().min(-400).max(400).optional(),
   scale: z.number().min(0).max(3).optional(),
+  /**
+   * Independent axes, which is what squash and stretch actually is. A single
+   * `scale` can only make something bigger or smaller; a thing that lands and
+   * squashes needs its width and height to disagree for a few frames.
+   */
+  scaleX: z.number().min(0).max(3).optional(),
+  scaleY: z.number().min(0).max(3).optional(),
   rotate: z.number().min(-720).max(720).optional(),
+  /** Rotation in depth. With perspective this is a card flip rather than a spin. */
+  rotateX: z.number().min(-360).max(360).optional(),
+  rotateY: z.number().min(-360).max(360).optional(),
   skewX: z.number().min(-45).max(45).optional(),
+  skewY: z.number().min(-45).max(45).optional(),
+  /** Letter spacing in em. Cheap to animate and reads as tension or release. */
+  tracking: z.number().min(-0.1).max(1).optional(),
   /** Pixels. Capped: blur is the one property here that costs real paint time. */
   blur: z.number().min(0).max(20).optional(),
 })
@@ -94,11 +107,56 @@ export const motionTrack = z.object({
   delayMs: z.number().int().min(0).max(4000),
   durationMs: z.number().int().min(80).max(6000),
   easing: z.enum(MOTION_EASINGS),
+  /**
+   * How many times the track plays.
+   *
+   * A shake, a pulse or a wobble is one short motion repeated, not eight
+   * keyframes spelling out every bounce. Capped: an alert that never settles
+   * is a distraction on someone's stream.
+   */
+  repeat: z.number().int().min(1).max(8).prefault(1),
+  /** Play alternate repeats backwards, which is what makes a pulse breathe. */
+  yoyo: z.boolean().prefault(false),
   /** At least a start and an end. Ordering is normalised by the compiler. */
-  keyframes: z.array(motionKeyframe).min(2).max(8),
+  keyframes: z.array(motionKeyframe).min(2).max(10),
 })
 
 export type MotionTrack = z.infer<typeof motionTrack>
+
+/**
+ * Extra visual layers the alert can spawn.
+ *
+ * The vocabulary exists so a description like "particles exploding outward"
+ * has somewhere to land other than the nearest translate. Each kind is a shape
+ * this app knows how to draw and animate; the specification chooses which,
+ * how many and how far, and the app draws every one of them.
+ */
+export const DECORATION_KINDS = ['burst', 'shine', 'ring', 'rays'] as const
+
+export type DecorationKind = (typeof DECORATION_KINDS)[number]
+
+export const decoration = z.object({
+  kind: z.enum(DECORATION_KINDS),
+  /** Sprites for a burst, spokes for rays. Ignored by shine and ring. */
+  count: z.number().int().min(1).max(24).prefault(10),
+  /** Degrees of arc the pieces are spread across. 360 is all directions. */
+  spread: z.number().min(10).max(360).prefault(360),
+  /** How far pieces travel, in pixels. */
+  distance: z.number().min(10).max(600).prefault(180),
+  /** Piece size in pixels. */
+  size: z.number().min(2).max(80).prefault(10),
+  delayMs: z.number().int().min(0).max(4000).prefault(0),
+  durationMs: z.number().int().min(120).max(4000).prefault(700),
+  easing: z.enum(MOTION_EASINGS).prefault('ease-out'),
+  /** Which brand colour to draw it in. */
+  color: z.enum(['primary', 'secondary', 'accent', 'text']).prefault('accent'),
+  /** Round pieces read as sparks; square ones read as confetti. */
+  shape: z.enum(['circle', 'square', 'bar']).prefault('circle'),
+  /** Fade the pieces out as they travel, rather than leaving them on screen. */
+  fade: z.boolean().prefault(true),
+})
+
+export type Decoration = z.infer<typeof decoration>
 
 /**
  * The whole composed animation.
@@ -109,8 +167,26 @@ export type MotionTrack = z.infer<typeof motionTrack>
  */
 export const motionTimeline = z.object({
   tracks: z.array(motionTrack).min(1).max(8),
+  /** Optional extra layers — bursts, sweeps, rings. */
+  decorations: z.array(decoration).max(3).prefault([]),
+  /**
+   * Depth for rotateX/rotateY, in pixels.
+   *
+   * Without it a 3D rotation is a flat squash: the browser has nothing to
+   * project through, so the flip nobody asked for looks like a scale.
+   */
+  perspective: z.number().min(0).max(2400).prefault(900),
   /** How the whole alert leaves. Kept simple — the exit is not the interesting part. */
   exitMs: z.number().int().min(120).max(1200).default(320),
 })
 
 export type MotionTimeline = z.infer<typeof motionTimeline>
+
+/**
+ * The shape a caller supplies, before defaults are filled in.
+ *
+ * Distinct from `MotionTimeline` because several fields have defaults: the
+ * parsed value always has `repeat` and `yoyo`, but nothing writing a timeline
+ * by hand should have to say `repeat: 1`.
+ */
+export type MotionTimelineInput = z.input<typeof motionTimeline>
