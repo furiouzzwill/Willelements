@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test, { after, afterEach, before, describe } from 'node:test'
@@ -36,6 +36,25 @@ function makeOverlay(name = 'Main') {
     settings: { previewBackground: 'transparent' },
   })
 }
+
+const layoutSource = readFileSync('src/app/overlay/layout.tsx', 'utf8')
+
+describe('what OBS is handed', () => {
+  test('the browser-source layout paints no canvas of its own', () => {
+    // A browser source composites over the stream, so the page must have no
+    // opaque ground anywhere -- including the one the browser paints for you.
+    assert.match(layoutSource, /html,body\{background:transparent!important/)
+    assert.match(layoutSource, /color-scheme:normal!important/)
+  })
+
+  test('and clears the app-wide dark colour scheme for this route', () => {
+    // The app declares `colorScheme: 'dark'` globally, which asks the browser
+    // to paint an opaque canvas of that scheme. Right for every page a person
+    // looks at; fatal for the one OBS composites. Next resolves viewport per
+    // route, deepest wins, so this override is scoped to the overlay.
+    assert.match(layoutSource, /export const viewport: Viewport = \{ colorScheme: 'normal' \}/)
+  })
+})
 
 describe('overlay tokens', () => {
   test('are opaque, and unrelated to the row id', () => {
