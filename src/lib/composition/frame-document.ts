@@ -152,7 +152,7 @@ ${body}
   // Measured rather than pattern-matched, because this is the one place with a
   // real layout to measure — the frame has already run. A regex over the source
   // would have to guess at what the CSS resolves to.
-  function findBackdrop() {
+  function neutraliseBackdrop() {
     var frameWidth = document.documentElement.clientWidth;
     var frameHeight = document.documentElement.clientHeight;
     if (!frameWidth || !frameHeight) return null;
@@ -171,34 +171,61 @@ ${body}
 
       var name = element.tagName.toLowerCase() + (element.id ? '#' + element.id : '');
 
+      var found = null;
+
       if (styles.backgroundImage && styles.backgroundImage !== 'none') {
         var image = styles.backgroundImage;
         // Named in a sentence a person reads, so it is trimmed rather than
         // dumped -- an unbalanced half of a gradient helps nobody.
-        return name + ' (' + (image.length > 60 ? image.slice(0, 60) + '...' : image) + ')';
+        found = name + ' (' + (image.length > 60 ? image.slice(0, 60) + '...' : image) + ')';
+      } else {
+        var parts = /rgba?\(([^)]+)\)/.exec(styles.backgroundColor || '');
+        if (parts) {
+          var channels = parts[1].split(',');
+          var alpha = channels.length > 3 ? parseFloat(channels[3]) : 1;
+          // A deliberate light scrim is fine; anything you would notice is not.
+          if (alpha > 0.15) found = name + ' (' + styles.backgroundColor + ')';
+        }
       }
 
-      var parts = /rgba?\(([^)]+)\)/.exec(styles.backgroundColor || '');
-      if (parts) {
-        var channels = parts[1].split(',');
-        var alpha = channels.length > 3 ? parseFloat(channels[3]) : 1;
-        // A deliberate light scrim is fine; anything you would notice is not.
-        if (alpha > 0.15) return name + ' (' + styles.backgroundColor + ')';
-      }
+      if (!found) continue;
+
+      // Cleared, not merely reported. Blocking the save stops the next one; it
+      // does nothing for an alert already stored, and the person who saved it
+      // is on stream when they find out. Only the background goes -- the
+      // element and everything inside it draw exactly as before, so a backdrop
+      // that was also holding content loses the backdrop and keeps the content.
+      element.style.setProperty('background', 'transparent', 'important');
+      element.style.setProperty('background-image', 'none', 'important');
+      return found;
     }
 
     return null;
   }
 
+  function sweep() {
+    try {
+      return neutraliseBackdrop();
+    } catch (e) {
+      // A sweep that throws must not fail the composition it was sweeping.
+      return null;
+    }
+  }
+
   requestAnimationFrame(function () {
     requestAnimationFrame(function () {
-      var backdrop = null;
-      try {
-        backdrop = findBackdrop();
-      } catch (e) {
-        // An audit that throws must not fail the composition it was auditing.
-      }
+      var backdrop = sweep();
       window.__weReport(backdrop ? { ready: true, backdrop: backdrop } : { ready: true });
+
+      // A composition can grow a backdrop part-way through -- an impact flash,
+      // a panel that expands. Bounded deliberately: a few cheap passes across
+      // the alert's own lifetime, then done. This runs on the machine encoding
+      // the stream, so it does not get to run forever.
+      var passes = 0;
+      var timer = setInterval(function () {
+        if (++passes > 12) return clearInterval(timer);
+        sweep();
+      }, 400);
     });
   });
 </script>

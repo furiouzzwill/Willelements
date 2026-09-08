@@ -235,7 +235,7 @@ describe('the full-frame backdrop audit', () => {
     // already run by this point, so there is a real layout to measure.
     assert.match(doc, /getBoundingClientRect/)
     assert.match(doc, /getComputedStyle/)
-    assert.match(doc, /findBackdrop/)
+    assert.match(doc, /neutraliseBackdrop/)
   })
 
   test('requires both dimensions, so a full-width banner is not a backdrop', () => {
@@ -243,13 +243,33 @@ describe('the full-frame backdrop audit', () => {
     assert.match(doc, /box\.width < frameWidth \* 0\.9 \|\| box\.height < frameHeight \* 0\.9/)
   })
 
-  test('an audit that throws does not fail the composition it audited', () => {
+  test('a sweep that throws does not fail the composition it swept', () => {
     const doc = build('<div>hi</div>')
-    const audit = doc.slice(doc.indexOf('backdrop = findBackdrop()'))
+    const sweep = doc.slice(doc.indexOf('function sweep()'))
 
-    assert.match(audit, /catch/)
+    assert.match(sweep, /catch/)
     // Ready is still reported either way.
-    assert.match(audit, /ready:\s*true/)
+    assert.match(sweep, /ready:\s*true/)
+  })
+
+  test('clears the backdrop rather than only reporting it', () => {
+    // Blocking the save stops the next one. It does nothing for an alert
+    // already stored, and the person who saved that one is on stream when
+    // they find out.
+    const doc = build('<div>hi</div>')
+
+    assert.match(doc, /setProperty\('background', 'transparent', 'important'\)/)
+    assert.match(doc, /setProperty\('background-image', 'none', 'important'\)/)
+  })
+
+  test('keeps sweeping for a backdrop that appears mid-animation, but not forever', () => {
+    // An impact flash or an expanding panel can arrive after the first pass.
+    // This runs on the machine encoding the stream, so it is bounded.
+    const doc = build('<div>hi</div>')
+
+    assert.match(doc, /setInterval/)
+    assert.match(doc, /passes > 12/)
+    assert.match(doc, /clearInterval/)
   })
 })
 
